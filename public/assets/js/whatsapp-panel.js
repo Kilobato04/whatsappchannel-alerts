@@ -65,9 +65,9 @@
         // Header
         updateElement('stationName', station.station_name);
         
-        // Subtítulo con tipo de dispositivo y ubicación
+        // Subtítulo con tipo de dispositivo y ubicación TRADUCIDA
         const deviceType = getDeviceTypeLabel(station.device_type);
-        const location = station.city || 'México';
+        const location = translateLocation(station.city);
         updateElement('stationSubtitle', `${deviceType} - ${location}`);
         
         // IAS Principal
@@ -137,7 +137,7 @@
     }
     
     /**
-     * Renderizar gráfica con Plotly (CORREGIDO PARA MÓVIL)
+     * Renderizar gráfica con Plotly - AJUSTES FINALES
      */
     function renderChart(historicalData, stationName) {
         const chartDiv = document.getElementById('iasChart');
@@ -172,9 +172,14 @@
         };
         
         const layout = {
-            margin: { t: 10, r: 10, l: 35, b: 40 }, /* ← AJUSTADO: márgenes más pequeños */
+            margin: { 
+                t: 10,    // top
+                r: 20,    // ← AUMENTADO: right margin para última barra
+                l: 35,    // left
+                b: 40     // bottom
+            },
             yaxis: {
-                title: { text: 'IAS', font: { size: 10, color: '#333' } },
+                title: '', // ← REMOVIDO: ya no mostrar "IAS" aquí
                 zeroline: false,
                 showgrid: true,
                 gridcolor: 'rgba(200, 200, 200, 0.3)',
@@ -184,7 +189,7 @@
                 showgrid: false,
                 tickfont: { size: 7, color: '#666' },
                 tickangle: -45,
-                nticks: 12 /* ← AJUSTADO: menos ticks para móvil */
+                nticks: 12
             },
             plot_bgcolor: 'transparent',
             paper_bgcolor: 'transparent',
@@ -192,7 +197,7 @@
             showlegend: false,
             bargap: 0.15,
             hovermode: 'closest',
-            autosize: true /* ← CRÍTICO: que se ajuste al contenedor */
+            autosize: true
         };
         
         const config = {
@@ -316,6 +321,33 @@
             'smability-SMAAmicro': 'Monitor Smability Micro'
         };
         return labels[deviceType] || 'Monitor';
+    }
+    
+    /**
+     * NUEVA: Traducir ubicaciones al español
+     */
+    function translateLocation(city) {
+        if (!city) return 'México';
+        
+        const translations = {
+            'Mexico City': 'CDMX',
+            'Estado de Mexico': 'EDOMEX',
+            'State of Mexico': 'EDOMEX',
+            'Guadalajara': 'Guadalajara',
+            'Monterrey': 'Monterrey',
+            'Guatemala City': 'Guatemala',
+            'Puebla': 'Puebla',
+            'Querétaro': 'Querétaro',
+            'Toluca': 'Toluca'
+        };
+        
+        // Buscar traducción exacta
+        if (translations[city]) {
+            return translations[city];
+        }
+        
+        // Si no hay traducción, retornar el original
+        return city;
     }
     
     function getIASEmoji(value) {
