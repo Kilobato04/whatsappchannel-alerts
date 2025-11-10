@@ -4,7 +4,7 @@
   "description": "Lambda function para generar alertas de calidad del aire",
   "main": "index.js",
   "scripts": {
-    "test": "node index.js"
+    "test": "node test-local.js"
   },
   "dependencies": {
     "@sparticuz/chromium": "^119.0.2",
