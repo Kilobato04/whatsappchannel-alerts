@@ -1,0 +1,428 @@
+/**
+ * Estilos para panel de alertas WhatsApp
+ * Basado en master-api-panels.css con adaptaciones
+ */
+
+/* === RESET Y FUENTES === */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'DIN Pro', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* === CONTENEDOR PRINCIPAL === */
+.whatsapp-alert-container {
+    width: 100%;
+    max-width: 1200px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* === PANEL DE ALERTA === */
+.whatsapp-alert-panel {
+    width: 1200px;
+    height: 630px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    
+    /* Variables CSS dinámicas */
+    --alert-color: #FFFF00;
+    --alert-color-rgb: 255, 255, 0;
+}
+
+/* === HEADER === */
+.alert-header {
+    background: rgba(var(--alert-color-rgb), 0.25);
+    padding: 20px 24px;
+    border-bottom: 2px solid var(--alert-color);
+}
+
+.alert-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.alert-station-name {
+    font-size: 28px;
+    font-weight: bold;
+    color: #000;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.alert-station-subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+    font-weight: normal;
+}
+
+/* === BARRA IAS === */
+.alert-ias-bar-container {
+    margin: 16px 24px;
+    padding: 0;
+}
+
+.alert-ias-bar {
+    width: 100%;
+    height: 16px;
+    background: linear-gradient(
+        to right,
+        #00e400 0%,
+        #00e400 20%,
+        #ffff00 20%,
+        #ffff00 40%,
+        #ff7e00 40%,
+        #ff7e00 60%,
+        #ff0000 60%,
+        #ff0000 80%,
+        #8f3f97 80%,
+        #8f3f97 100%
+    );
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    position: relative;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.alert-ias-bar::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 4px;
+    background: #000;
+    border-radius: 2px;
+    left: var(--ias-position, 50%);
+    box-shadow: 0 0 6px rgba(0, 0, 0, 0.4);
+    transition: left 0.5s ease;
+}
+
+.alert-ias-bar-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    font-size: 9px;
+    color: #666;
+    padding: 0 4px;
+    text-align: center;
+}
+
+.alert-ias-bar-labels span {
+    flex: 1;
+    line-height: 1.2;
+}
+
+/* === SECCIÓN IAS PRINCIPAL === */
+.alert-ias-section {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 0 24px 16px 24px;
+    padding: 16px;
+    background: rgba(var(--alert-color-rgb), 0.12);
+    border-radius: 12px;
+    border: 2px solid var(--alert-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.alert-ias-emoji {
+    font-size: 36px;
+    line-height: 1;
+}
+
+.alert-ias-indicator {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--alert-color);
+    border: 2px solid rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.alert-ias-value {
+    font-size: 36px;
+    font-weight: bold;
+    color: #000;
+    line-height: 1;
+}
+
+.alert-ias-status {
+    margin-left: auto;
+    text-align: right;
+}
+
+.alert-status-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 3px 0;
+}
+
+.alert-status-label {
+    font-size: 13px;
+    color: #333;
+    font-weight: 600;
+}
+
+.alert-status-value {
+    font-size: 13px;
+    font-weight: bold;
+    color: #000;
+}
+
+/* === SECCIÓN CONTAMINANTE === */
+.alert-pollutant-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 0 24px 16px 24px;
+}
+
+.alert-data-item {
+    background: rgba(var(--alert-color-rgb), 0.08);
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(var(--alert-color-rgb), 0.3);
+}
+
+.alert-data-label {
+    color: #666;
+    font-size: 11px;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.alert-data-value {
+    font-weight: bold;
+    color: #000;
+    font-size: 15px;
+}
+
+/* === RECOMENDACIONES DE SALUD === */
+.alert-health-section {
+    margin: 0 24px 16px 24px;
+    padding: 14px;
+    background: rgba(var(--alert-color-rgb), 0.06);
+    border-radius: 10px;
+    border: 1px solid rgba(var(--alert-color-rgb), 0.2);
+}
+
+.alert-health-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #000;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid rgba(var(--alert-color-rgb), 0.3);
+}
+
+.alert-health-group {
+    margin-bottom: 10px;
+}
+
+.alert-health-group:last-child {
+    margin-bottom: 0;
+}
+
+.alert-health-group-name {
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.alert-health-recommendation {
+    font-size: 11px;
+    color: #555;
+    line-height: 1.4;
+    margin: 0;
+}
+
+/* === SECCIÓN GRÁFICA === */
+.alert-chart-section {
+    margin: 0 24px 16px 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.alert-chart-title {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.alert-chart-container {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    padding: 8px;
+    min-height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* === FOOTER === */
+.alert-footer {
+    background: rgba(var(--alert-color-rgb), 0.15);
+    padding: 12px 24px;
+    border-top: 1px solid rgba(var(--alert-color-rgb), 0.3);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.alert-footer-update {
+    font-size: 12px;
+    color: #333;
+    font-weight: 600;
+}
+
+.alert-footer-cta {
+    flex: 1;
+    text-align: center;
+}
+
+.alert-whatsapp-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(37, 211, 102, 0.95);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(37, 211, 102, 0.3);
+}
+
+.alert-whatsapp-link:hover {
+    background: rgba(37, 211, 102, 1);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(37, 211, 102, 0.5);
+}
+
+.alert-whatsapp-link svg {
+    flex-shrink: 0;
+}
+
+.alert-footer-branding {
+    font-size: 12px;
+}
+
+.alert-footer-branding a {
+    color: #4264fb;
+    text-decoration: none;
+    font-weight: bold;
+    transition: color 0.2s ease;
+}
+
+.alert-footer-branding a:hover {
+    color: #3251d8;
+    text-decoration: underline;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 1250px) {
+    .whatsapp-alert-panel {
+        width: 100%;
+        height: auto;
+        min-height: 630px;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .alert-station-name {
+        font-size: 22px;
+    }
+    
+    .alert-pollutant-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .alert-footer {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .alert-footer-cta {
+        order: -1;
+    }
+}
+
+/* === ANIMACIONES === */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.whatsapp-alert-panel {
+    animation: fadeIn 0.5s ease;
+}
+
+/* === ACCESIBILIDAD === */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* === PRINT STYLES === */
+@media print {
+    body {
+        background: white;
+    }
+    
+    .whatsapp-alert-panel {
+        box-shadow: none;
+        page-break-inside: avoid;
+    }
+}
+
+/* === HIGH DPI DISPLAYS === */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .alert-station-name,
+    .alert-ias-value,
+    .alert-data-value {
+        text-rendering: optimizeLegibility;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
