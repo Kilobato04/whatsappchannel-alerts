@@ -64,7 +64,11 @@
         
         // Header
         updateElement('stationName', station.station_name);
-        updateElement('stationSubtitle', getDeviceTypeLabel(station.device_type));
+        
+        // Subtítulo con tipo de dispositivo y ubicación
+        const deviceType = getDeviceTypeLabel(station.device_type);
+        const location = station.city || 'México';
+        updateElement('stationSubtitle', `${deviceType} - ${location}`);
         
         // IAS Principal
         const ias = station.ias;
@@ -133,7 +137,7 @@
     }
     
     /**
-     * Renderizar gráfica con Plotly
+     * Renderizar gráfica con Plotly (CORREGIDO PARA MÓVIL)
      */
     function renderChart(historicalData, stationName) {
         const chartDiv = document.getElementById('iasChart');
@@ -161,46 +165,72 @@
             name: stationName,
             marker: {
                 color: processedData.map(item => item.color),
-                line: { color: '#999999', width: 1 },
+                line: { color: '#999999', width: 0.5 },
                 opacity: 0.9
             },
             hovertemplate: '<b>%{x}</b><br>IAS: %{y}<extra></extra>'
         };
         
         const layout = {
-            margin: { t: 20, r: 15, l: 45, b: 50 },
+            margin: { t: 10, r: 10, l: 35, b: 40 }, /* ← AJUSTADO: márgenes más pequeños */
             yaxis: {
-                title: { text: 'IAS', font: { size: 11, color: '#333' } },
+                title: { text: 'IAS', font: { size: 10, color: '#333' } },
                 zeroline: false,
                 showgrid: true,
                 gridcolor: 'rgba(200, 200, 200, 0.3)',
-                tickfont: { size: 9, color: '#666' }
+                tickfont: { size: 8, color: '#666' }
             },
             xaxis: {
                 showgrid: false,
-                tickfont: { size: 8, color: '#666' },
-                tickangle: -45
+                tickfont: { size: 7, color: '#666' },
+                tickangle: -45,
+                nticks: 12 /* ← AJUSTADO: menos ticks para móvil */
             },
             plot_bgcolor: 'transparent',
             paper_bgcolor: 'transparent',
             font: { family: 'DIN Pro, Arial, sans-serif', color: '#333' },
             showlegend: false,
             bargap: 0.15,
-            hovermode: 'closest'
+            hovermode: 'closest',
+            autosize: true /* ← CRÍTICO: que se ajuste al contenedor */
         };
         
         const config = {
             responsive: true,
             displayModeBar: false,
-            displaylogo: false
+            displaylogo: false,
+            scrollZoom: false
         };
         
+        // Limpiar cualquier gráfica previa
+        Plotly.purge(chartDiv);
+        
+        // Crear nueva gráfica
         Plotly.newPlot(chartDiv, [trace], layout, config)
             .then(() => {
-                console.log('✅ Gráfica renderizada');
+                console.log('✅ Gráfica renderizada correctamente');
+                
+                // Asegurar transparencia del fondo
+                setTimeout(() => {
+                    const plotlyDiv = chartDiv.querySelector('.plotly-graph-div');
+                    if (plotlyDiv) {
+                        plotlyDiv.style.backgroundColor = 'transparent';
+                    }
+                    
+                    const svgs = chartDiv.querySelectorAll('svg');
+                    svgs.forEach(svg => {
+                        svg.style.backgroundColor = 'transparent';
+                    });
+                    
+                    // Forzar resize para asegurar que se ajuste al contenedor
+                    if (window.Plotly) {
+                        Plotly.Plots.resize(chartDiv);
+                    }
+                }, 100);
             })
             .catch(error => {
                 console.error('Error renderizando gráfica:', error);
+                showChartPlaceholder('Error al renderizar gráfica');
             });
     }
     
@@ -220,7 +250,7 @@
             const now = new Date();
             const minutes = now.getMinutes();
             
-            // Actualizar en los minutos configurados
+            // Actualizar en los minutos configurados (:05 y :20)
             if (minutes === CONFIG.UPDATE_SCHEDULE.FIRST || 
                 minutes === CONFIG.UPDATE_SCHEDULE.SECOND) {
                 console.log(`🔄 Actualización programada (${minutes} minutos)`);
@@ -341,12 +371,29 @@
         const chartDiv = document.getElementById('iasChart');
         if (chartDiv) {
             chartDiv.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; height: 200px; color: #666; font-size: 14px;">
+                <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #666; font-size: 12px; text-align: center; padding: 10px;">
                     ${message}
                 </div>
             `;
         }
     }
+    
+    // Manejar resize de ventana para ajustar gráfica
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            const chartDiv = document.getElementById('iasChart');
+            if (chartDiv && window.Plotly) {
+                try {
+                    Plotly.Plots.resize(chartDiv);
+                    console.log('📏 Gráfica redimensionada');
+                } catch (error) {
+                    console.warn('Error redimensionando gráfica:', error);
+                }
+            }
+        }, 250);
+    });
     
     // Inicializar cuando el DOM esté listo
     if (document.readyState === 'loading') {
