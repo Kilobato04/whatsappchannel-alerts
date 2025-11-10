@@ -1,0 +1,21 @@
+{
+  "name": "smability-whatsapp-alerts",
+  "version": "1.0.0",
+  "description": "Sistema de alertas de calidad del aire para WhatsApp",
+  "main": "public/index.html",
+  "scripts": {
+    "dev": "npx http-server public -p 8080 -o",
+    "test": "echo 'Testing panel...' && npx http-server public -p 8080"
+  },
+  "keywords": [
+    "air-quality",
+    "whatsapp",
+    "alerts",
+    "smability"
+  ],
+  "author": "Smability",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "http-server": "^14.1.1"
+  }
+}
