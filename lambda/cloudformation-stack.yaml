@@ -1,0 +1,149 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Smability WhatsApp Alerts - Infraestructura completa'
+
+Parameters:
+  PanelURL:
+    Type: String
+    Default: 'https://whatsairegpt.netlify.app'
+    Description: URL del panel de alertas
+  
+  S3BucketName:
+    Type: String
+    Default: 'smability-whatsapp-alerts'
+    Description: Nombre del bucket S3
+
+Resources:
+  # S3 Bucket para imágenes
+  AlertImagesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedMethods:
+              - GET
+            AllowedHeaders:
+              - '*'
+            MaxAge: 3600
+
+  # Bucket Policy (público para alertas/)
+  AlertImagesBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref AlertImagesBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: '*'
+            Action: 's3:GetObject'
+            Resource: !Sub '${AlertImagesBucket.Arn}/alertas/*'
+
+  # IAM Role para Lambda
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - 'arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole'
+      Policies:
+        - PolicyName: S3Access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:PutObject'
+                  - 's3:PutObjectAcl'
+                Resource: !Sub '${AlertImagesBucket.Arn}/alertas/*'
+
+  # Lambda Function
+  GenerateAlertFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: smability-generate-alert
+      Runtime: nodejs20.x
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 60
+      MemorySize: 2048
+      Environment:
+        Variables:
+          S3_BUCKET: !Ref S3BucketName
+          PANEL_URL: !Ref PanelURL
+      Code:
+        ZipFile: |
+          exports.handler = async (event) => {
+              return { statusCode: 200, body: 'Placeholder - Deploy real code' };
+          };
+
+  # EventBridge Rule - :05 de cada hora
+  ScheduleRule05:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: smability-alert-schedule-05
+      Description: 'Trigger alerta a los :05 de cada hora'
+      ScheduleExpression: 'cron(5 * * * ? *)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt GenerateAlertFunction.Arn
+          Id: 'TargetFunctionV1'
+
+  # EventBridge Rule - :20 de cada hora
+  ScheduleRule20:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: smability-alert-schedule-20
+      Description: 'Trigger alerta a los :20 de cada hora'
+      ScheduleExpression: 'cron(20 * * * ? *)'
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt GenerateAlertFunction.Arn
+          Id: 'TargetFunctionV1'
+
+  # Permisos para EventBridge invocar Lambda
+  PermissionForEventsToInvokeLambda05:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GenerateAlertFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScheduleRule05.Arn
+
+  PermissionForEventsToInvokeLambda20:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref GenerateAlertFunction
+      Action: 'lambda:InvokeFunction'
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt ScheduleRule20.Arn
+
+Outputs:
+  S3BucketName:
+    Description: 'Nombre del bucket S3'
+    Value: !Ref AlertImagesBucket
+  
+  LambdaFunctionArn:
+    Description: 'ARN de la Lambda function'
+    Value: !GetAtt GenerateAlertFunction.Arn
+  
+  ScheduleRule05Arn:
+    Description: 'ARN de la regla :05'
+    Value: !GetAtt ScheduleRule05.Arn
+  
+  ScheduleRule20Arn:
+    Description: 'ARN de la regla :20'
+    Value: !GetAtt ScheduleRule20.Arn
