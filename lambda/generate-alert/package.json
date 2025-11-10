@@ -1,0 +1,14 @@
+{
+  "name": "smability-generate-alert",
+  "version": "1.0.0",
+  "description": "Lambda function para generar alertas de calidad del aire",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "dependencies": {
+    "@sparticuz/chromium": "^119.0.2",
+    "puppeteer-core": "^21.5.2",
+    "aws-sdk": "^2.1498.0"
+  }
+}
