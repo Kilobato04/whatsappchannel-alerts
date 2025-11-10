@@ -137,7 +137,7 @@
     }
     
     /**
-     * Renderizar gráfica con Plotly - AJUSTES FINALES
+     * Renderizar gráfica con Plotly - MÁRGENES BALANCEADOS
      */
     function renderChart(historicalData, stationName) {
         const chartDiv = document.getElementById('iasChart');
@@ -174,12 +174,12 @@
         const layout = {
             margin: { 
                 t: 10,    // top
-                r: 20,    // ← AUMENTADO: right margin para última barra
-                l: 35,    // left
+                r: 25,    // right - mismo que left para balance
+                l: 25,    // ← CAMBIADO: de 35 a 25 (mover gráfica a la izquierda)
                 b: 40     // bottom
             },
             yaxis: {
-                title: '', // ← REMOVIDO: ya no mostrar "IAS" aquí
+                title: '',
                 zeroline: false,
                 showgrid: true,
                 gridcolor: 'rgba(200, 200, 200, 0.3)',
