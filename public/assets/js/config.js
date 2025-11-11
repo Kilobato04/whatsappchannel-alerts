@@ -15,16 +15,15 @@ const CONFIG = {
         HISTORICAL_VARIABLE: 'ias'
     },
     
-    // Intervalos de actualización (minutos después de cada hora)
+    // Intervalo de actualización (solo :20 de cada hora)
     UPDATE_SCHEDULE: {
-        FIRST: 5,   // :05 de cada hora
-        SECOND: 20  // :20 de cada hora
+        MINUTE: 20  // ← CAMBIO: Solo un intervalo
     },
     
     // Dimensiones del panel (para captura)
     PANEL: {
-        WIDTH: 1200,
-        HEIGHT: 630
+        WIDTH: 480,
+        HEIGHT: 1200
     },
     
     // Traducciones de contaminantes
