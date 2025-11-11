@@ -240,7 +240,7 @@
     }
     
     /**
-     * Configurar actualización automática
+     * Configurar actualización automática - SOLO :20
      */
     function setupAutoUpdate() {
         console.log('⏰ Configurando actualización automática...');
@@ -255,15 +255,14 @@
             const now = new Date();
             const minutes = now.getMinutes();
             
-            // Actualizar en los minutos configurados (:05 y :20)
-            if (minutes === CONFIG.UPDATE_SCHEDULE.FIRST || 
-                minutes === CONFIG.UPDATE_SCHEDULE.SECOND) {
-                console.log(`🔄 Actualización programada (${minutes} minutos)`);
+            // Actualizar solo en el minuto 20
+            if (minutes === CONFIG.UPDATE_SCHEDULE.MINUTE) {
+                console.log(`🔄 Actualización programada (:${minutes})`);
                 loadWorstStation();
             }
         }, 60000); // Verificar cada minuto
         
-        console.log(`✅ Actualizaciones programadas: :${CONFIG.UPDATE_SCHEDULE.FIRST} y :${CONFIG.UPDATE_SCHEDULE.SECOND} de cada hora`);
+        console.log(`✅ Actualización programada: :${CONFIG.UPDATE_SCHEDULE.MINUTE} de cada hora`);
     }
     
     /**
