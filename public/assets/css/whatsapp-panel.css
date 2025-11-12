@@ -12,14 +12,14 @@
 
 body {
     font-family: 'DIN Pro', Arial, sans-serif;
-    /* CAMBIO 1: Background dinámico basado en IAS (se actualiza con JS) */
-    background: linear-gradient(135deg, var(--bg-color-1, #667eea) 0%, var(--bg-color-2, #764ba2) 100%);
+    /* CAMBIO: Background inicial que será reemplazado por JS */
+    background: #667eea;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    transition: background 0.5s ease; /* Transición suave al cambiar colores */
+    transition: background 0.8s ease; /* Transición suave */
 }
 
 /* === CONTENEDOR PRINCIPAL === */
