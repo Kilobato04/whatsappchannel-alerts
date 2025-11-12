@@ -93,12 +93,6 @@
         updateElement('dominantPollutant', pollutantName);
         updateElement('pollutantValue', `${ias.dominant_value.value.toFixed(2)} ${ias.dominant_value.unit}`);
         
-        // Recomendaciones de salud
-        const health = station.health_recommendations;
-        updateElement('healthGroupA', health.a.recommendation);
-        updateElement('healthGroupB', health.b.recommendation);
-        updateElement('healthGroupC', health.c.recommendation);
-        
         // Última actualización
         updateLastReading();
         
@@ -147,72 +141,6 @@
         // También guardar en variables CSS por si acaso
         body.style.setProperty('--bg-color-1', `rgb(${color1R}, ${color1G}, ${color1B})`);
         body.style.setProperty('--bg-color-2', `rgb(${color2R}, ${color2G}, ${color2B})`);
-    }
-    
-    /**
-     * NUEVA: Simplificar recomendaciones de salud
-     */
-    function simplifyRecommendation(recommendation, group) {
-        if (!recommendation) return '--';
-        
-        // Mapeo de resúmenes concisos por tipo de mensaje común
-        const patterns = {
-            // Grupo Sensible
-            'reduce.*actividades.*vigorosas': 'Sensible: Evita ejercicio intenso al aire libre',
-            'evita.*ejercicio.*intenso': 'Sensible: Evita ejercicio intenso al aire libre',
-            
-            // Grupo Vulnerable
-            'posible.*actividades.*moderadas': 'Vulnerable: Ejercicio moderado permitido con precaución',
-            'pueden.*realizar.*actividades': 'Vulnerable: Ejercicio moderado permitido con precaución',
-            
-            // Población General
-            'posible.*realizar.*actividades': 'General: Actividades normales, monitorea síntomas',
-            'realizar.*actividades.*aire.*libre': 'General: Actividades normales, monitorea síntomas',
-            'permanece.*interiores': 'General: Permanece en interiores',
-            'emergencia': 'General: Emergencia - Permanece en casa'
-        };
-        
-        // Buscar patrón que coincida
-        const lowerRec = recommendation.toLowerCase();
-        for (const [pattern, summary] of Object.entries(patterns)) {
-            const regex = new RegExp(pattern, 'i');
-            if (regex.test(lowerRec)) {
-                return summary;
-            }
-        }
-        
-        // Si no hay patrón, truncar inteligentemente
-        const maxLength = 60;
-        if (recommendation.length <= maxLength) {
-            return `${getGroupPrefix(group)}: ${recommendation}`;
-        }
-        
-        // Truncar en punto o coma más cercano
-        let truncated = recommendation.substring(0, maxLength);
-        const lastPeriod = truncated.lastIndexOf('.');
-        const lastComma = truncated.lastIndexOf(',');
-        
-        if (lastPeriod > 30) {
-            truncated = truncated.substring(0, lastPeriod + 1);
-        } else if (lastComma > 30) {
-            truncated = truncated.substring(0, lastComma + 1);
-        } else {
-            truncated = truncated.trim() + '...';
-        }
-        
-        return `${getGroupPrefix(group)}: ${truncated}`;
-    }
-    
-    /**
-     * NUEVA: Obtener prefijo del grupo
-     */
-    function getGroupPrefix(group) {
-        const prefixes = {
-            'sensible': 'Sensible',
-            'vulnerable': 'Vulnerable',
-            'general': 'General'
-        };
-        return prefixes[group] || '';
     }
 
     /**
