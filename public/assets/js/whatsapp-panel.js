@@ -82,6 +82,8 @@
         if (indicator) {
             indicator.style.backgroundColor = ias.color_code;
         }
+
+        updateBackgroundColors(ias.color_code, ias.value);
         
         // Colores dinámicos
         updatePanelColors(ias.color_code, ias.value);
@@ -105,26 +107,46 @@
     }
 
     /**
-     * NUEVA: Actualizar colores del background basado en IAS
+     * CORREGIDO: Actualizar colores del background basado en IAS
      */
     function updateBackgroundColors(colorCode, iasValue) {
         const body = document.body;
         
-        // Crear colores degradados basados en el color IAS
+        console.log(`🎨 Actualizando background con color: ${colorCode} (IAS: ${iasValue})`);
+        
+        // Convertir hex a RGB
         const rgb = hexToRgb(colorCode);
-        if (!rgb) return;
+        if (!rgb) {
+            console.error('❌ No se pudo convertir color hex a RGB');
+            return;
+        }
         
-        // Color base (más oscuro)
-        const color1 = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`;
+        console.log(`🔍 RGB extraído: r=${rgb.r}, g=${rgb.g}, b=${rgb.b}`);
         
-        // Color claro (más brillante)
-        const color2 = `rgb(${Math.min(255, rgb.r + 40)}, ${Math.min(255, rgb.g + 40)}, ${Math.min(255, rgb.b + 40)})`;
+        // Crear degradado basado en el color IAS
+        // Color 1: Versión más oscura del color base
+        const darkenFactor = 0.6; // 60% del brillo original
+        const color1R = Math.round(rgb.r * darkenFactor);
+        const color1G = Math.round(rgb.g * darkenFactor);
+        const color1B = Math.round(rgb.b * darkenFactor);
         
-        // Aplicar degradado
-        body.style.setProperty('--bg-color-1', color1);
-        body.style.setProperty('--bg-color-2', color2);
+        // Color 2: Versión más clara del color base
+        const lightenFactor = 1.3; // 130% del brillo original
+        const color2R = Math.min(255, Math.round(rgb.r * lightenFactor));
+        const color2G = Math.min(255, Math.round(rgb.g * lightenFactor));
+        const color2B = Math.min(255, Math.round(rgb.b * lightenFactor));
         
-        console.log(`🎨 Background actualizado: ${color1} → ${color2}`);
+        // Crear el degradado CSS
+        const gradient = `linear-gradient(135deg, rgb(${color1R}, ${color1G}, ${color1B}) 0%, rgb(${color2R}, ${color2G}, ${color2B}) 100%)`;
+        
+        console.log(`✅ Aplicando degradado: ${gradient}`);
+        
+        // Aplicar directamente al body
+        body.style.background = gradient;
+        
+        // También guardar en variables CSS por si acaso
+        body.style.setProperty('--bg-color-1', `rgb(${color1R}, ${color1G}, ${color1B})`);
+        body.style.setProperty('--bg-color-2', `rgb(${color2R}, ${color2G}, ${color2B})`);
     }
     
     /**
