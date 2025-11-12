@@ -12,14 +12,13 @@
 
 body {
     font-family: 'DIN Pro', Arial, sans-serif;
-    /* CAMBIO: Background inicial que será reemplazado por JS */
     background: #667eea;
     min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    transition: background 0.8s ease; /* Transición suave */
+    transition: background 0.8s ease;
 }
 
 /* === CONTENEDOR PRINCIPAL === */
@@ -246,52 +245,9 @@ body {
     font-size: 13px;
 }
 
-/* === RECOMENDACIONES DE SALUD (CAMBIO 3: SIMPLIFICADAS) === */
-.alert-health-section {
-    margin: 0 20px 14px 20px;
-    padding: 12px;
-    background: rgba(var(--alert-color-rgb), 0.06);
-    border-radius: 10px;
-    border: 1px solid rgba(var(--alert-color-rgb), 0.2);
-}
+/* REMOVIDO: Toda la sección .alert-health-* */
 
-.alert-health-title {
-    font-size: 14px;
-    font-weight: bold;
-    color: #000;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
-    border-bottom: 2px solid rgba(var(--alert-color-rgb), 0.3);
-}
-
-.alert-health-group {
-    margin-bottom: 8px;
-    display: flex;
-    align-items: flex-start;
-    gap: 6px;
-}
-
-.alert-health-group:last-child {
-    margin-bottom: 0;
-}
-
-.alert-health-group-name {
-    font-size: 11px;
-    font-weight: bold;
-    color: #333;
-    flex-shrink: 0;
-    min-width: 28px;
-}
-
-.alert-health-recommendation {
-    font-size: 11px;
-    color: #444;
-    line-height: 1.4;
-    margin: 0;
-    flex: 1;
-}
-
-/* === SECCIÓN GRÁFICA === */
+/* === SECCIÓN GRÁFICA (AHORA MÁS ARRIBA) === */
 .alert-chart-section {
     margin: 0 20px 14px 20px;
     display: flex;
@@ -324,7 +280,7 @@ body {
     height: 100% !important;
 }
 
-/* === FOOTER (CAMBIO 2: SIN BOTÓN WHATSAPP) === */
+/* === FOOTER === */
 .alert-footer {
     background: rgba(var(--alert-color-rgb), 0.15);
     padding: 12px 20px;
@@ -355,8 +311,6 @@ body {
     color: #3251d8;
     text-decoration: underline;
 }
-
-/* REMOVIDO: .alert-footer-cta y .alert-whatsapp-link */
 
 /* === RESPONSIVE - Desktop View === */
 @media (min-width: 769px) {
