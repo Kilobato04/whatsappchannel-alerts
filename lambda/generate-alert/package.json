@@ -9,6 +9,7 @@
   "dependencies": {
     "@sparticuz/chromium": "^119.0.2",
     "puppeteer-core": "^21.5.2",
-    "aws-sdk": "^2.1498.0"
+    "@aws-sdk/client-s3": "^3.450.0",
+    "axios": "^1.6.0"
   }
 }
