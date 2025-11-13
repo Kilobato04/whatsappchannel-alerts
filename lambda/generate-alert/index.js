@@ -40,6 +40,9 @@ exports.handler = async (event) => {
         
         const whatsappMessage = generateWhatsAppMessage(worstStation);
         console.log(`💬 Mensaje generado: ${whatsappMessage.length} caracteres`);
+
+        // Publicar en Telegram
+        const telegramResult = await publishToTelegram(imageUrl, whatsappMessage, worstStation);
         
         return {
             statusCode: 200,
@@ -57,6 +60,7 @@ exports.handler = async (event) => {
                     size: imageBuffer.length
                 },
                 message: whatsappMessage,
+                telegram: telegramResult,  // ⭐ AGREGAR ESTO
                 timestamp: new Date().toISOString()
             })
         };
@@ -283,4 +287,68 @@ https://smability.io/airegpt/network/map.html
 Chatea con AIreGPT: https://wa.me/525519566483`;
 
     return message;
+}
+
+/**
+ * Publicar en Telegram Channel
+ */
+async function publishToTelegram(imageUrl, message, station) {
+    console.log('📱 Publicando en Telegram...');
+    
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const channelId = process.env.TELEGRAM_CHANNEL_ID;
+    
+    // Si no hay credenciales, saltar
+    if (!botToken || !channelId) {
+        console.log('⚠️ Credenciales de Telegram no configuradas, saltando publicación');
+        return { skipped: true, reason: 'No credentials' };
+    }
+    
+    const axios = require('axios');
+    
+    try {
+        // Formatear mensaje para Telegram (soporte Markdown)
+        const telegramMessage = `🌫️ *Alerta de Calidad del Aire*
+
+📍 *${station.station_name}*, ${station.city}
+📊 *IAS: ${station.ias.value}* - ${station.ias.category}
+
+${message}
+
+🔗 [Ver mapa en tiempo real](https://smability.io/mapa)
+🤖 [Consultar AIreGPT](https://whatsairegpt.netlify.app)
+
+_Actualizado: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX_`;
+
+        // Enviar foto con caption
+        const response = await axios.post(
+            `https://api.telegram.org/bot${botToken}/sendPhoto`,
+            {
+                chat_id: channelId,
+                photo: imageUrl,
+                caption: telegramMessage,
+                parse_mode: 'Markdown'
+            },
+            {
+                timeout: 10000
+            }
+        );
+        
+        console.log('✅ Mensaje publicado en Telegram:', JSON.stringify(response.data));
+        
+        return {
+            success: true,
+            messageId: response.data.result?.message_id,
+            channelId: channelId
+        };
+        
+    } catch (error) {
+        console.error('❌ Error publicando en Telegram:', error.response?.data || error.message);
+        
+        // No fallar la Lambda si Telegram falla
+        return {
+            success: false,
+            error: error.response?.data?.description || error.message
+        };
+    }
 }
