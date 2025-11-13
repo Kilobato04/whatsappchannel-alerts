@@ -1,21 +1,13 @@
 /**
  * Lambda Function: Generar Alerta de Calidad del Aire
  */
-
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
-const AWS = require('aws-sdk');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
-// CRÍTICO: Configuración explícita de región y firma
-AWS.config.update({
-    region: 'us-east-1',
-    signatureVersion: 'v4'
-});
-
-const s3 = new AWS.S3({
-    region: 'us-east-1',
-    signatureVersion: 'v4',
-    s3ForcePathStyle: false
+// Crear cliente S3 con AWS SDK v3 (más estable que v2)
+const s3Client = new S3Client({
+    region: 'us-east-1'
 });
 
 // Configuración
@@ -205,7 +197,7 @@ async function capturePanel(browser, station) {
 }
 
 /**
- * Subir imagen a S3
+ * Subir imagen a S3 con AWS SDK v3
  */
 async function uploadToS3(imageBuffer, station) {
     console.log('☁️ Subiendo a S3...');
@@ -214,7 +206,7 @@ async function uploadToS3(imageBuffer, station) {
     const fileName = `alert-${station.station_id}-${timestamp}.jpg`;
     const key = `alertas/${fileName}`;
     
-    const params = {
+    const command = new PutObjectCommand({
         Bucket: CONFIG.S3_BUCKET,
         Key: key,
         Body: imageBuffer,
@@ -227,9 +219,15 @@ async function uploadToS3(imageBuffer, station) {
             'category': station.ias.category,
             'timestamp': new Date().toISOString()
         }
-    };
+    });
     
-    await s3.putObject(params).promise();
+    try {
+        await s3Client.send(command);
+        console.log('✅ Imagen subida exitosamente a S3');
+    } catch (error) {
+        console.error('❌ Error subiendo a S3:', error);
+        throw error;
+    }
     
     if (CONFIG.CLOUDFRONT_URL) {
         return `${CONFIG.CLOUDFRONT_URL}/${key}`;
