@@ -197,7 +197,7 @@ async function capturePanel(browser, station) {
 }
 
 /**
- * Subir imagen a S3 con AWS SDK v3
+ * Subir imagen a S3 con AWS SDK v3 (con sanitización de metadata)
  */
 async function uploadToS3(imageBuffer, station) {
     console.log('☁️ Subiendo a S3...');
@@ -206,6 +206,16 @@ async function uploadToS3(imageBuffer, station) {
     const fileName = `alert-${station.station_id}-${timestamp}.jpg`;
     const key = `alertas/${fileName}`;
     
+    // Función helper para sanitizar metadata (solo caracteres ASCII)
+    const sanitizeMetadata = (str) => {
+        if (!str) return '';
+        return str
+            .normalize('NFD')  // Descomponer caracteres acentuados
+            .replace(/[\u0300-\u036f]/g, '')  // Remover acentos
+            .replace(/[^\x00-\x7F]/g, '')  // Remover caracteres no-ASCII
+            .trim();
+    };
+    
     const command = new PutObjectCommand({
         Bucket: CONFIG.S3_BUCKET,
         Key: key,
@@ -213,10 +223,10 @@ async function uploadToS3(imageBuffer, station) {
         ContentType: 'image/jpeg',
         CacheControl: 'public, max-age=3600',
         Metadata: {
-            'station-id': station.station_id,
-            'station-name': station.station_name,
+            'station-id': sanitizeMetadata(station.station_id),
+            'station-name': sanitizeMetadata(station.station_name),  // "Tultitlán" → "Tultitlan"
             'ias': String(station.ias.value),
-            'category': station.ias.category,
+            'category': sanitizeMetadata(station.ias.category),
             'timestamp': new Date().toISOString()
         }
     });
