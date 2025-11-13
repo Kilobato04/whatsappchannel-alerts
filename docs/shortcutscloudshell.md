@@ -1,3 +1,7 @@
+
+# Si no estás en el proyecto, navega:
+cd ~/whatsappchannel-alerts/lambda/generate-alert
+
 # Ver última imagen
 ~/ultima
 
