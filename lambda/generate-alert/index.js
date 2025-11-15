@@ -298,7 +298,6 @@ async function publishToTelegram(imageUrl, message, station) {
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
     const channelId = process.env.TELEGRAM_CHANNEL_ID;
     
-    // Si no hay credenciales, saltar
     if (!botToken || !channelId) {
         console.log('⚠️ Credenciales de Telegram no configuradas, saltando publicación');
         return { skipped: true, reason: 'No credentials' };
@@ -307,18 +306,29 @@ async function publishToTelegram(imageUrl, message, station) {
     const axios = require('axios');
     
     try {
-        // Formatear mensaje para Telegram (soporte Markdown)
-        const telegramMessage = `🌫️ *Alerta de Calidad del Aire*
+        // Crear mensaje CORTO para Telegram (máx 1024 caracteres)
+        const shortMessage = `🌫️ *Alerta de Calidad del Aire*
 
 📍 *${station.station_name}*, ${station.city}
 📊 *IAS: ${station.ias.value}* - ${station.ias.category}
 
-${message}
+⚠️ *Recomendaciones:*
+${getShortRecommendations(station.ias.category)}
 
-🔗 [Ver mapa en tiempo real](https://smability.io/mapa)
-🤖 [Consultar AIreGPT](https://whatsairegpt.netlify.app)
+🔗 [Ver mapa](https://smability.io/mapa) | [AIreGPT](https://whatsairegpt.netlify.app)
 
-_Actualizado: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX_`;
+_${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX_`;
+
+        // Verificar longitud antes de enviar
+        if (shortMessage.length > 1024) {
+            console.warn(`⚠️ Mensaje muy largo (${shortMessage.length} chars), truncando...`);
+        }
+        
+        const finalMessage = shortMessage.length > 1024 
+            ? shortMessage.substring(0, 1020) + '...'
+            : shortMessage;
+
+        console.log(`📝 Mensaje Telegram: ${finalMessage.length} caracteres`);
 
         // Enviar foto con caption
         const response = await axios.post(
@@ -326,7 +336,7 @@ _Actualizado: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_C
             {
                 chat_id: channelId,
                 photo: imageUrl,
-                caption: telegramMessage,
+                caption: finalMessage,
                 parse_mode: 'Markdown'
             },
             {
@@ -345,10 +355,24 @@ _Actualizado: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_C
     } catch (error) {
         console.error('❌ Error publicando en Telegram:', error.response?.data || error.message);
         
-        // No fallar la Lambda si Telegram falla
         return {
             success: false,
             error: error.response?.data?.description || error.message
         };
     }
+}
+
+/**
+ * Obtener recomendaciones cortas según categoría
+ */
+function getShortRecommendations(category) {
+    const recommendations = {
+        'Buena': '✅ Calidad del aire aceptable. Disfruta actividades al aire libre.',
+        'Aceptable': '⚠️ Grupos sensibles: limita actividades intensas prolongadas.',
+        'Mala': '🚨 Grupos sensibles: evita actividades al aire libre.',
+        'Muy Mala': '⛔ Todos: evita actividades prolongadas al aire libre.',
+        'Extremadamente Mala': '🆘 EMERGENCIA: permanece en interiores con ventanas cerradas.'
+    };
+    
+    return recommendations[category] || '⚠️ Consulta recomendaciones oficiales.';
 }
