@@ -38,11 +38,12 @@ exports.handler = async (event) => {
         const imageUrl = await uploadToS3(imageBuffer, worstStation);
         console.log(`☁️ Imagen subida: ${imageUrl}`);
         
-        const whatsappMessage = generateWhatsAppMessage(worstStation);
-        console.log(`💬 Mensaje generado: ${whatsappMessage.length} caracteres`);
-
+        // Generar mensaje optimizado
+        const messageData = generateWhatsAppMessage(worstStation);
+        console.log(`💬 Mensaje generado con ${messageData.recommendations.length} caracteres de recomendaciones`);
+        
         // Publicar en Telegram
-        const telegramResult = await publishToTelegram(imageUrl, whatsappMessage, worstStation);
+        const telegramResult = await publishToTelegram(imageUrl, messageData, worstStation);
         
         return {
             statusCode: 200,
@@ -251,48 +252,77 @@ async function uploadToS3(imageBuffer, station) {
 }
 
 /**
- * Generar mensaje de WhatsApp con recomendaciones
+ * Generar mensaje con recomendaciones optimizado para Telegram (<780 chars)
  */
 function generateWhatsAppMessage(station) {
-    const ias = station.ias;
-    const health = station.health_recommendations;
+    const category = station.ias.category;
     
-    const emoji = ias.value <= 50 ? '😊' : 
-                  ias.value <= 100 ? '😐' : 
-                  ias.value <= 150 ? '😷' : 
-                  ias.value <= 200 ? '🤢' : '☠️';
+    // Mapeo de riesgo según categoría
+    const riskLevel = {
+        'Buena': 'Ninguno',
+        'Aceptable': 'Bajo, solo grupos sensibles',
+        'Mala': 'Moderado para toda la población',
+        'Muy Mala': 'Alto para toda la población',
+        'Extremadamente Mala': 'Crítico para todos'
+    };
     
-    const message = `${emoji} *Alerta de Calidad del Aire*
-
-📍 *${station.station_name}* - ${station.city}
-📊 IAS: *${ias.value}* (${ias.category})
-🧪 Contaminante: ${ias.dominant_pollutant.toUpperCase()} - ${ias.dominant_value.value.toFixed(1)} ${ias.dominant_value.unit}
-⚠️ Riesgo: ${ias.risk_level}
-
-*Recomendaciones de Salud:*
-
-👥 *Grupo Sensible:*
-${health.a.recommendation}
-
-⚠️ *Grupo Vulnerable:*
-${health.b.recommendation}
-
-🌍 *Población General:*
-${health.c.recommendation}
-
-🗺️ *Ver mapa en tiempo real:*
-https://smability.io/airegpt/network/map.html
-
-💬 *¿Quieres alertas personalizadas de TU zona?*
-Chatea con AIreGPT: https://wa.me/525519566483`;
-
-    return message;
+    const risk = riskLevel[category] || 'Consulta información oficial';
+    
+    // Recomendaciones optimizadas por categoría
+    let recommendations = '';
+    
+    switch(category) {
+        case 'Buena':
+            recommendations = `✅ *Recomendaciones:*
+- Calidad del aire aceptable
+- Disfruta actividades al aire libre`;
+            break;
+            
+        case 'Aceptable':
+            recommendations = `⚠️ *Recomendaciones:*
+- Grupos sensibles: limita esfuerzos prolongados al aire libre
+- Población general puede realizar actividades normalmente`;
+            break;
+            
+        case 'Mala':
+            recommendations = `🚨 *Recomendaciones:*
+- Población general: reduce actividades intensas al aire libre
+- Niños, adultos mayores y personas con problemas respiratorios: limita salidas
+- Usa cubrebocas si sales`;
+            break;
+            
+        case 'Muy Mala':
+            recommendations = `⛔ *Recomendaciones:*
+- Evita actividades al aire libre
+- Grupos sensibles: permanece en interiores
+- Cierra ventanas y puertas
+- Usa cubrebocas KN95 si debes salir`;
+            break;
+            
+        case 'Extremadamente Mala':
+            recommendations = `🆘 *EMERGENCIA - Recomendaciones:*
+- TODOS: permanece en interiores
+- Cierra puertas y ventanas
+- Usa purificador de aire si es posible
+- Evita ejercicio incluso en interiores
+- Consulta médico si tienes síntomas`;
+            break;
+            
+        default:
+            recommendations = `⚠️ *Recomendaciones:*
+- Consulta información oficial en tiempo real`;
+    }
+    
+    return {
+        recommendations: recommendations,
+        risk: risk
+    };
 }
 
 /**
- * Publicar en Telegram Channel
+ * Publicar en Telegram Channel (optimizado <780 caracteres)
  */
-async function publishToTelegram(imageUrl, message, station) {
+async function publishToTelegram(imageUrl, messageData, station) {
     console.log('📱 Publicando en Telegram...');
     
     const botToken = process.env.TELEGRAM_BOT_TOKEN;
@@ -306,29 +336,55 @@ async function publishToTelegram(imageUrl, message, station) {
     const axios = require('axios');
     
     try {
-        // Crear mensaje CORTO para Telegram (máx 1024 caracteres)
-        const shortMessage = `🌫️ *Alerta de Calidad del Aire*
+        // Emoji según categoría
+        const categoryEmoji = {
+            'Buena': '✅',
+            'Aceptable': '⚠️',
+            'Mala': '🚨',
+            'Muy Mala': '⛔',
+            'Extremadamente Mala': '🆘'
+        };
+        
+        const emoji = categoryEmoji[station.ias.category] || '📊';
+        
+        // Obtener información del contaminante
+        const pollutant = station.ias.pollutant || 'N/A';
+        const pollutantValue = station.ias.pollutant_value || station.ias.value;
+        const pollutantUnit = station.ias.pollutant_unit || 'µg/m³';
+        
+        // Formatear fecha y hora
+        const dateTime = new Date().toLocaleString('es-MX', { 
+            timeZone: 'America/Mexico_City',
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        // Construir mensaje optimizado
+        const telegramCaption = `${emoji} *Alerta de Calidad del Aire*
 
 📍 *${station.station_name}*, ${station.city}
 📊 *IAS: ${station.ias.value}* - ${station.ias.category}
+🧪 Contaminante: ${pollutant} (${pollutantValue} ${pollutantUnit})
+⚠️ Riesgo: ${messageData.risk}
 
-⚠️ *Recomendaciones:*
-${getShortRecommendations(station.ias.category)}
+${messageData.recommendations}
 
-🔗 [Ver mapa](https://smability.io/mapa) | [AIreGPT](https://whatsairegpt.netlify.app)
+💬 [AIreGPT - alertas en WhatsApp](https://wa.me/525519566483)
+🗺️ [Mapa](https://smability.io/airegpt/network/map.html)
+📊 [Widget](https://whatsairegpt.netlify.app)
 
-_${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX_`;
+_${dateTime}_`;
 
-        // Verificar longitud antes de enviar
-        if (shortMessage.length > 1024) {
-            console.warn(`⚠️ Mensaje muy largo (${shortMessage.length} chars), truncando...`);
-        }
+        const captionLength = telegramCaption.length;
+        console.log(`📏 Caption: ${captionLength} caracteres`);
         
-        const finalMessage = shortMessage.length > 1024 
-            ? shortMessage.substring(0, 1020) + '...'
-            : shortMessage;
-
-        console.log(`📝 Mensaje Telegram: ${finalMessage.length} caracteres`);
+        // Verificación de seguridad
+        if (captionLength > 780) {
+            console.warn(`⚠️ ADVERTENCIA: Mensaje excede 780 chars (${captionLength})`);
+        }
 
         // Enviar foto con caption
         const response = await axios.post(
@@ -336,7 +392,7 @@ _${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX
             {
                 chat_id: channelId,
                 photo: imageUrl,
-                caption: finalMessage,
+                caption: telegramCaption,
                 parse_mode: 'Markdown'
             },
             {
@@ -344,12 +400,13 @@ _${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} CDMX
             }
         );
         
-        console.log('✅ Mensaje publicado en Telegram:', JSON.stringify(response.data));
+        console.log(`✅ Publicado en Telegram (${captionLength} chars)`);
         
         return {
             success: true,
             messageId: response.data.result?.message_id,
-            channelId: channelId
+            channelId: channelId,
+            captionLength: captionLength
         };
         
     } catch (error) {
