@@ -40,7 +40,8 @@ exports.handler = async (event) => {
         
         // Generar mensaje optimizado
         const messageData = generateWhatsAppMessage(worstStation);
-        console.log(`💬 Mensaje generado con ${messageData.recommendations.length} caracteres de recomendaciones`);
+        console.log(`💬 Mensaje: ${messageData.recommendations.length} chars`);
+        console.log(`⚠️ Riesgo del API: ${worstStation.ias.risk_level}`);
         
         // Publicar en Telegram
         const telegramResult = await publishToTelegram(imageUrl, messageData, worstStation);
@@ -54,7 +55,8 @@ exports.handler = async (event) => {
                     name: worstStation.station_name,
                     ias: worstStation.ias.value,
                     category: worstStation.ias.category,
-                    city: worstStation.city
+                    city: worstStation.city,
+                    risk: worstStation.ias.risk_level  // ← Agregar
                 },
                 image: {
                     url: imageUrl,
@@ -258,18 +260,6 @@ async function uploadToS3(imageBuffer, station) {
 function generateWhatsAppMessage(station) {
     const category = station.ias.category;
     
-    // Mapeo de riesgo según categoría
-    const riskLevel = {
-        'Buena': 'Ninguno',
-        'Aceptable': 'Bajo, solo grupos sensibles',
-        'Mala': 'Moderado para toda la población',
-        'Muy Mala': 'Alto para toda la población',
-        'Extremadamente Mala': 'Crítico para todos'
-    };
-    
-    const risk = riskLevel[category] || 'Consulta información oficial';
-    
-    // Recomendaciones optimizadas por categoría
     let recommendations = '';
     
     switch(category) {
@@ -315,8 +305,7 @@ function generateWhatsAppMessage(station) {
     }
     
     return {
-        recommendations: recommendations,
-        risk: risk
+        recommendations: recommendations
     };
 }
 
@@ -337,7 +326,6 @@ async function publishToTelegram(imageUrl, messageData, station) {
     const axios = require('axios');
     
     try {
-        // Emoji según categoría
         const categoryEmoji = {
             'Buena': '✅',
             'Aceptable': '⚠️',
@@ -348,10 +336,12 @@ async function publishToTelegram(imageUrl, messageData, station) {
         
         const emoji = categoryEmoji[station.ias.category] || '📊';
         
-        // Obtener información del contaminante
-        const pollutant = station.ias.pollutant || 'N/A';
-        const pollutantValue = station.ias.pollutant_value || station.ias.value;
-        const pollutantUnit = station.ias.pollutant_unit || 'µg/m³';
+        // Usar datos directamente del API (SIN formatear)
+        const pollutantName = station.ias.dominant_pollutant 
+            ? station.ias.dominant_pollutant.toUpperCase().replace('PM', 'PM') 
+            : 'N/A';
+        const pollutantValue = station.ias.dominant_value?.value || station.ias.value;
+        const pollutantUnit = station.ias.dominant_value?.unit || 'μg/m³';
         
         // Formatear fecha y hora
         const dateTime = new Date().toLocaleString('es-MX', { 
@@ -366,28 +356,28 @@ async function publishToTelegram(imageUrl, messageData, station) {
         // Construir mensaje optimizado
         const telegramCaption = `${emoji} *Alerta de Calidad del Aire*
 
-        📍 *${station.station_name}*, ${station.city}
-        📊 *IAS: ${station.ias.value}* - ${station.ias.category}
-        🧪 Contaminante: ${pollutant} (${pollutantValue} ${pollutantUnit})
-        ⚠️ Riesgo: ${messageData.risk}
-        
-        ${messageData.recommendations}
-        
-        💬 [AIreGPT en WhatsApp](https://wa.me/525519566483)
-        🗺️ [Mapa de la red](https://smability.io/airegpt/network/map.html)
-        📊 [Widget](https://whatsairegpt.netlify.app)
-        
-        _${dateTime}_`;
+📍 *${station.station_name}*, ${station.city}
+📊 *IAS: ${station.ias.value}* - ${station.ias.category}
+🧪 Contaminante: ${pollutantName} (${pollutantValue} ${pollutantUnit})
+⚠️ Riesgo: ${station.ias.risk_level}
+
+${messageData.recommendations}
+
+💬 [AIreGPT - alertas en WhatsApp](https://wa.me/525519566483)
+🗺️ [Mapa](https://smability.io/airegpt/network/map.html)
+📊 [Widget](https://whatsairegpt.netlify.app)
+
+_${dateTime}_`;
 
         const captionLength = telegramCaption.length;
         console.log(`📏 Caption: ${captionLength} caracteres`);
+        console.log(`🧪 Contaminante: ${pollutantName} (${pollutantValue} ${pollutantUnit})`);
+        console.log(`⚠️ Riesgo: ${station.ias.risk_level}`);
         
-        // Verificación de seguridad
         if (captionLength > 780) {
             console.warn(`⚠️ ADVERTENCIA: Mensaje excede 780 chars (${captionLength})`);
         }
 
-        // Enviar foto con caption
         const response = await axios.post(
             `https://api.telegram.org/bot${botToken}/sendPhoto`,
             {
