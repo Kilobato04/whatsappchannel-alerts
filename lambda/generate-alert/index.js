@@ -1,5 +1,5 @@
 /**
- * Lambda Function: Generar Alerta de Calidad del Aire
+ * Lambda Function: Generar Alerta de Calidad del Aire - commit 18112025
  */
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
