@@ -60,7 +60,8 @@ exports.handler = async (event) => {
                     url: imageUrl,
                     size: imageBuffer.length
                 },
-                message: whatsappMessage,
+                message: messageData.recommendations,  // ← CORREGIDO
+                risk: messageData.risk,                 // ← AGREGADO
                 telegram: telegramResult,  // ⭐ AGREGAR ESTO
                 timestamp: new Date().toISOString()
             })
