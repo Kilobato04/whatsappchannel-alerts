@@ -366,18 +366,18 @@ async function publishToTelegram(imageUrl, messageData, station) {
         // Construir mensaje optimizado
         const telegramCaption = `${emoji} *Alerta de Calidad del Aire*
 
-📍 *${station.station_name}*, ${station.city}
-📊 *IAS: ${station.ias.value}* - ${station.ias.category}
-🧪 Contaminante: ${pollutant} (${pollutantValue} ${pollutantUnit})
-⚠️ Riesgo: ${messageData.risk}
-
-${messageData.recommendations}
-
-💬 [AIreGPT - alertas en WhatsApp](https://wa.me/525519566483)
-🗺️ [Mapa](https://smability.io/airegpt/network/map.html)
-📊 [Widget](https://whatsairegpt.netlify.app)
-
-_${dateTime}_`;
+        📍 *${station.station_name}*, ${station.city}
+        📊 *IAS: ${station.ias.value}* - ${station.ias.category}
+        🧪 Contaminante: ${pollutant} (${pollutantValue} ${pollutantUnit})
+        ⚠️ Riesgo: ${messageData.risk}
+        
+        ${messageData.recommendations}
+        
+        💬 [AIreGPT en WhatsApp](https://wa.me/525519566483)
+        🗺️ [Mapa de la red](https://smability.io/airegpt/network/map.html)
+        📊 [Widget](https://whatsairegpt.netlify.app)
+        
+        _${dateTime}_`;
 
         const captionLength = telegramCaption.length;
         console.log(`📏 Caption: ${captionLength} caracteres`);
