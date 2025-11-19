@@ -336,12 +336,15 @@ async function publishToTelegram(imageUrl, messageData, station) {
         
         const emoji = categoryEmoji[station.ias.category] || '📊';
         
-        // Usar datos directamente del API (SIN formatear)
+        // Usar datos del API directamente
         const pollutantName = station.ias.dominant_pollutant 
-            ? station.ias.dominant_pollutant.toUpperCase().replace('PM', 'PM') 
+            ? station.ias.dominant_pollutant.toUpperCase()
             : 'N/A';
         const pollutantValue = station.ias.dominant_value?.value || station.ias.value;
         const pollutantUnit = station.ias.dominant_value?.unit || 'μg/m³';
+        
+        // Formatear ciudad (Mexico City → CDMX)
+        const cityName = station.city === 'Mexico City' ? 'CDMX' : station.city;
         
         // Formatear fecha y hora
         const dateTime = new Date().toLocaleString('es-MX', { 
@@ -356,15 +359,15 @@ async function publishToTelegram(imageUrl, messageData, station) {
         // Construir mensaje optimizado
         const telegramCaption = `${emoji} *Alerta de Calidad del Aire*
 
-📍 *${station.station_name}*, ${station.city}
+📍 *${station.station_name}*, ${cityName}
 📊 *IAS: ${station.ias.value}* - ${station.ias.category}
 🧪 Contaminante: ${pollutantName} (${pollutantValue} ${pollutantUnit})
 ⚠️ Riesgo: ${station.ias.risk_level}
 
 ${messageData.recommendations}
 
-💬 [AIreGPT - alertas en WhatsApp](https://wa.me/525519566483)
-🗺️ [Mapa](https://smability.io/airegpt/network/map.html)
+💬 [AIreGPT en WhatsApp](https://wa.me/525519566483)
+🗺️ [Mapa de la Red](https://smability.io/airegpt/network/map.html)
 📊 [Widget](https://whatsairegpt.netlify.app)
 
 _${dateTime}_`;
@@ -372,6 +375,7 @@ _${dateTime}_`;
         const captionLength = telegramCaption.length;
         console.log(`📏 Caption: ${captionLength} caracteres`);
         console.log(`🧪 Contaminante: ${pollutantName} (${pollutantValue} ${pollutantUnit})`);
+        console.log(`📍 Ciudad: ${cityName}`);
         console.log(`⚠️ Riesgo: ${station.ias.risk_level}`);
         
         if (captionLength > 780) {
