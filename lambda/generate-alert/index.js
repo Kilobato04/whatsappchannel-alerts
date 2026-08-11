@@ -93,13 +93,14 @@ exports.handler = async (event) => {
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
             
-            // Formatear fecha y hora para el mensaje
-            const dateTime = new Date().toLocaleString('es-MX', { 
-                timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', 
-                year: 'numeric', hour: '2-digit', minute: '2-digit' 
-            });
+            // Forzar hora CDMX (UTC-6) sin depender de la configuración del servidor de AWS
+            const now = new Date();
+            const mxTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
+            
+            const pad = (n) => n.toString().padStart(2, '0');
+            const dateTime = `${pad(mxTime.getDate())}/${pad(mxTime.getMonth() + 1)}/${mxTime.getFullYear()}, ${pad(mxTime.getHours())}:${pad(mxTime.getMinutes())}`;
 
-            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${targetUrl})\n\n_${dateTime}_`;
+            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${targetUrl})\n\n_${dateTime} (CDMX)_`;
             
             const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage);
             
@@ -482,22 +483,31 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // Aumentamos el ancho a 768 (tamaño tablet) para aprovechar los lados
-    // y dejamos el height base, pero usaremos fullPage para no cortar abajo.
-    await page.setViewport({ width: 768, height: 1200, deviceScaleFactor: 2 });
+    // Aumentamos a 1024 para aprovechar todo el ancho disponible
+    await page.setViewport({ width: 1024, height: 1200, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
     
-    console.log('⏳ Esperando 3 segundos para animación del nivel de agua...');
+    console.log('🛠️ Ocultando herramientas de Plotly y ajustando anchos...');
+    
+    // 1. Inyectar CSS para ocultar el "modebar" (las herramientas de Plotly)
+    await page.addStyleTag({ content: '.modebar { display: none !important; }' });
+    
+    // 2. Forzar un "resize" en la ventana para que Plotly recalcule los espacios en blanco y llene los gaps
+    await page.evaluate(() => {
+        window.dispatchEvent(new Event('resize'));
+    });
+    
+    console.log('⏳ Esperando 3 segundos para acomodo y animación...');
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Tomamos la captura de toda la página (fullPage: true) para garantizar los 3 paneles
+    // Tomamos la captura de toda la página
     let screenshot;
     try {
         screenshot = await page.screenshot({ 
             type: 'jpeg', 
             quality: 90,
-            fullPage: true  // <-- Esto evita que se corte por abajo
+            fullPage: true 
         });
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
