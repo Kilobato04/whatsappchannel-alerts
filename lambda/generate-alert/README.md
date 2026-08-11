@@ -21,13 +21,9 @@ Esta función Lambda genera la imagen de alerta de calidad del aire.
 - `API_URL` - URL de la API de calidad del aire
 
 ## Deploy
-```bash
-npm install
-zip -r function.zip index.js node_modules/ package.json
-aws lambda update-function-code \
-  --function-name smability-generate-alert \
-  --zip-file fileb://function.zip
-```
+cd generate-alert $ 
+git pull origin main
+./deploy.sh
 
 ## Testing Local
 ```bash
