@@ -482,23 +482,25 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 2 });
+    // Aumentamos el ancho a 768 (tamaño tablet) para aprovechar los lados
+    // y dejamos el height base, pero usaremos fullPage para no cortar abajo.
+    await page.setViewport({ width: 768, height: 1200, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
     
     console.log('⏳ Esperando 3 segundos para animación del nivel de agua...');
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Intentamos buscar el contenedor del panel, si no existe, tomamos la pantalla completa
+    // Tomamos la captura de toda la página (fullPage: true) para garantizar los 3 paneles
     let screenshot;
     try {
-        const panelElement = await page.$('.whatsapp-alert-panel');
-        if (panelElement) {
-            screenshot = await panelElement.screenshot({ type: 'jpeg', quality: 90 });
-        } else {
-            screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
-        }
+        screenshot = await page.screenshot({ 
+            type: 'jpeg', 
+            quality: 90,
+            fullPage: true  // <-- Esto evita que se corte por abajo
+        });
     } catch (error) {
+        console.error('❌ Error capturando cisterna:', error);
         screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
     }
     
