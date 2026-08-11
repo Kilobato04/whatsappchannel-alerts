@@ -187,7 +187,7 @@ async function capturePanel(browser, station) {
     );
     
     console.log('⏳ Panel cargado, esperando 2 segundos para gráfica...');
-    await page.waitForTimeout(2000);
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     const panelElement = await page.$('.whatsapp-alert-panel');
     const boundingBox = await panelElement.boundingBox();
