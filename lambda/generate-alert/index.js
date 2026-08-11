@@ -93,12 +93,12 @@ exports.handler = async (event) => {
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
             
-            // Forzar hora CDMX (UTC-6) sin depender de la configuración del servidor de AWS
-            const now = new Date();
-            const mxTime = new Date(now.getTime() - (6 * 60 * 60 * 1000));
-            
-            const pad = (n) => n.toString().padStart(2, '0');
-            const dateTime = `${pad(mxTime.getDate())}/${pad(mxTime.getMonth() + 1)}/${mxTime.getFullYear()}, ${pad(mxTime.getHours())}:${pad(mxTime.getMinutes())}`;
+            // Obtener la hora exacta de CDMX usando el motor nativo de localización
+            const dateTime = new Date().toLocaleString('es-MX', { 
+                timeZone: 'America/Mexico_City', 
+                day: '2-digit', month: '2-digit', year: 'numeric', 
+                hour: '2-digit', minute: '2-digit', hour12: true 
+            });
 
             const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${targetUrl})\n\n_${dateTime} (CDMX)_`;
             
@@ -483,25 +483,32 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // Aumentamos a 1024 para aprovechar todo el ancho disponible
-    await page.setViewport({ width: 1024, height: 1200, deviceScaleFactor: 2 });
+    // Subimos el ancho a 1200 para aprovechar al máximo los márgenes laterales
+    await page.setViewport({ width: 1200, height: 1200, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
     
-    console.log('🛠️ Ocultando herramientas de Plotly y ajustando anchos...');
+    console.log('🛠️ Limpiando estilos y ajustando anchos de Plotly...');
     
-    // 1. Inyectar CSS para ocultar el "modebar" (las herramientas de Plotly)
-    await page.addStyleTag({ content: '.modebar { display: none !important; }' });
+    // Inyectamos CSS para:
+    // 1. Ocultar la barra de herramientas (.modebar)
+    // 2. Forzar a los contenedores de Plotly a ocupar el 100% de ancho y eliminar el espacio vacío
+    await page.addStyleTag({ 
+        content: `
+            .modebar { display: none !important; }
+            .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
+            .svg-container svg { width: 100% !important; }
+        ` 
+    });
     
-    // 2. Forzar un "resize" en la ventana para que Plotly recalcule los espacios en blanco y llene los gaps
+    // Forzar redimensionamiento global en el navegador
     await page.evaluate(() => {
         window.dispatchEvent(new Event('resize'));
     });
     
-    console.log('⏳ Esperando 3 segundos para acomodo y animación...');
+    console.log('⏳ Esperando 3 segundos para renderizado final...');
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Tomamos la captura de toda la página
     let screenshot;
     try {
         screenshot = await page.screenshot({ 
