@@ -2,7 +2,7 @@
  * Lambda Function: Generar Alerta de Calidad del Aire - commit 18112025
  */
 let chromium;
-const puppeteer = require('puppeteer-core');
+let puppeteer;
 const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 
 // Crear cliente S3 con AWS SDK v3 (más estable que v2)
@@ -23,6 +23,7 @@ const CONFIG = {
  */
 exports.handler = async (event) => {
     chromium = (await import('@sparticuz/chromium')).default;
+    puppeteer = (await import('puppeteer-core')).default;
     console.log('🚀 Iniciando generación de alerta...');
     console.log('Event:', JSON.stringify(event, null, 2));
     
