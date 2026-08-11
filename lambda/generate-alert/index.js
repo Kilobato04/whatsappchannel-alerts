@@ -13,7 +13,8 @@ const s3Client = new S3Client({
 // Configuración
 const CONFIG = {
     S3_BUCKET: process.env.S3_BUCKET || 'smability-whatsapp-alerts',
-    PANEL_URL: process.env.PANEL_URL || 'https://whatsairegpt.netlify.app',
+    PANEL_URL_AIRE: process.env.PANEL_URL || 'https://whatsairegpt.netlify.app',
+    PANEL_URL_CISTERNA: 'https://smawatelegram.netlify.app/',
     API_URL: process.env.API_URL || 'https://y4zwdmw7vf.execute-api.us-east-1.amazonaws.com/prod/api/air-quality/ias/current',
     CLOUDFRONT_URL: process.env.CLOUDFRONT_URL || null
 };
@@ -25,52 +26,78 @@ exports.handler = async (event) => {
     chromium = (await import('@sparticuz/chromium')).default;
     puppeteer = (await import('puppeteer-core')).default;
     console.log('🚀 Iniciando generación de alerta...');
+    
+    // 1. Leer el tipo de alerta
+    const tipoAlerta = event.tipoAlerta || 'AIRE';
+    console.log(`📌 Modo de ejecución: ${tipoAlerta}`);
     console.log('Event:', JSON.stringify(event, null, 2));
     
     let browser = null;
     
     try {
-        const worstStation = await getWorstStation();
-        console.log(`📍 Estación: ${worstStation.station_name} (IAS: ${worstStation.ias.value})`);
-        
+        // Lanzamos el navegador de forma global
         browser = await launchBrowser();
-        const imageBuffer = await capturePanel(browser, worstStation);
-        console.log(`📸 Captura generada: ${imageBuffer.length} bytes`);
         
-        const imageUrl = await uploadToS3(imageBuffer, worstStation);
-        console.log(`☁️ Imagen subida: ${imageUrl}`);
+        // ==========================================
+        // 🌬️ FLUJO 1: CALIDAD DEL AIRE
+        // ==========================================
+        if (tipoAlerta === 'AIRE') {
+            const worstStation = await getWorstStation();
+            console.log(`📍 Estación: ${worstStation.station_name} (IAS: ${worstStation.ias.value})`);
+            
+            const imageBuffer = await capturePanel(browser, worstStation);
+            console.log(`📸 Captura generada: ${imageBuffer.length} bytes`);
+            
+            const imageUrl = await uploadToS3(imageBuffer, worstStation);
+            console.log(`☁️ Imagen subida: ${imageUrl}`);
+            
+            const messageData = generateWhatsAppMessage(worstStation);
+            console.log(`💬 Mensaje: ${messageData.recommendations.length} chars`);
+            console.log(`⚠️ Riesgo del API: ${worstStation.ias.risk_level}`);
+            
+            const telegramResult = await publishToTelegram(imageUrl, messageData, worstStation);
+            
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    tipo: 'AIRE',
+                    station: {
+                        id: worstStation.station_id,
+                        name: worstStation.station_name,
+                        ias: worstStation.ias.value,
+                        category: worstStation.ias.category,
+                        city: worstStation.city,
+                        risk: worstStation.ias.risk_level
+                    },
+                    image: { url: imageUrl, size: imageBuffer.length },
+                    message: messageData.recommendations,
+                    risk: messageData.risk,
+                    telegram: telegramResult,
+                    timestamp: new Date().toISOString()
+                })
+            };
+        }
         
-        // Generar mensaje optimizado
-        const messageData = generateWhatsAppMessage(worstStation);
-        console.log(`💬 Mensaje: ${messageData.recommendations.length} chars`);
-        console.log(`⚠️ Riesgo del API: ${worstStation.ias.risk_level}`);
-        
-        // Publicar en Telegram
-        const telegramResult = await publishToTelegram(imageUrl, messageData, worstStation);
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                success: true,
-                station: {
-                    id: worstStation.station_id,
-                    name: worstStation.station_name,
-                    ias: worstStation.ias.value,
-                    category: worstStation.ias.category,
-                    city: worstStation.city,
-                    risk: worstStation.ias.risk_level  // ← Agregar
-                },
-                image: {
-                    url: imageUrl,
-                    size: imageBuffer.length
-                },
-                message: messageData.recommendations,  // ← CORREGIDO
-                risk: messageData.risk,                 // ← AGREGADO
-                telegram: telegramResult,  // ⭐ AGREGAR ESTO
-                timestamp: new Date().toISOString()
-            })
-        };
-        
+        // ==========================================
+        // 💧 FLUJO 2: CISTERNAS (SMAWA)
+        // ==========================================
+        else if (tipoAlerta === 'CISTERNA') {
+            console.log('💧 Ejecutando monitoreo volumétrico...');
+            
+            // Aquí irán las funciones dedicadas a capturar y enviar la foto de la cisterna
+            // Por ahora solo respondemos éxito para probar el switch
+            return {
+                statusCode: 200,
+                body: JSON.stringify({
+                    success: true,
+                    tipo: 'CISTERNA',
+                    message: 'El flujo de cisterna está listo para conectarse a las funciones.',
+                    timestamp: new Date().toISOString()
+                })
+            };
+        }
+
     } catch (error) {
         console.error('❌ Error:', error);
         
