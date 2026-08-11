@@ -21,10 +21,11 @@ Esta función Lambda genera la imagen de alerta de calidad del aire.
 - `API_URL` - URL de la API de calidad del aire
 
 ## Deploy
+```bash
 cd generate-alert $ 
 git pull origin main
 ./deploy.sh
-
+```
 ## Testing Local
 ```bash
 node index.js
