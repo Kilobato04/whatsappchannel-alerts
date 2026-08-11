@@ -83,16 +83,33 @@ exports.handler = async (event) => {
         // 💧 FLUJO 2: CISTERNAS (SMAWA)
         // ==========================================
         else if (tipoAlerta === 'CISTERNA') {
-            console.log('💧 Ejecutando monitoreo volumétrico...');
+            console.log('💧 Ejecutando monitoreo volumétrico SMAWA...');
             
-            // Aquí irán las funciones dedicadas a capturar y enviar la foto de la cisterna
-            // Por ahora solo respondemos éxito para probar el switch
+            const targetUrl = CONFIG.PANEL_URL_CISTERNA;
+            
+            const imageBuffer = await captureCisternaPanel(browser, targetUrl);
+            console.log(`📸 Captura volumétrica generada: ${imageBuffer.length} bytes`);
+            
+            const imageUrl = await uploadCisternaToS3(imageBuffer);
+            console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
+            
+            // Formatear fecha y hora para el mensaje
+            const dateTime = new Date().toLocaleString('es-MX', { 
+                timeZone: 'America/Mexico_City', day: '2-digit', month: '2-digit', 
+                year: 'numeric', hour: '2-digit', minute: '2-digit' 
+            });
+
+            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${targetUrl})\n\n_${dateTime}_`;
+            
+            const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage);
+            
             return {
                 statusCode: 200,
                 body: JSON.stringify({
                     success: true,
                     tipo: 'CISTERNA',
-                    message: 'El flujo de cisterna está listo para conectarse a las funciones.',
+                    image: { url: imageUrl, size: imageBuffer.length },
+                    telegram: telegramResult,
                     timestamp: new Date().toISOString()
                 })
             };
@@ -456,4 +473,93 @@ function getShortRecommendations(category) {
     };
     
     return recommendations[category] || '⚠️ Consulta recomendaciones oficiales.';
+}
+
+/**
+ * 💧 Capturar panel de Cisterna SMAWA
+ */
+async function captureCisternaPanel(browser, targetUrl) {
+    console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
+    const page = await browser.newPage();
+    
+    await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 2 });
+    
+    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+    
+    console.log('⏳ Esperando 3 segundos para animación del nivel de agua...');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Intentamos buscar el contenedor del panel, si no existe, tomamos la pantalla completa
+    let screenshot;
+    try {
+        const panelElement = await page.$('.whatsapp-alert-panel');
+        if (panelElement) {
+            screenshot = await panelElement.screenshot({ type: 'jpeg', quality: 90 });
+        } else {
+            screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        }
+    } catch (error) {
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+    }
+    
+    console.log('✅ Captura de cisterna completada');
+    return screenshot;
+}
+
+/**
+ * 💧 Subir imagen de Cisterna a S3
+ */
+async function uploadCisternaToS3(imageBuffer) {
+    console.log('☁️ Subiendo panel SMAWA a S3...');
+    
+    const timestamp = Date.now();
+    const key = `alertas/smawa-nivel-${timestamp}.jpg`;
+    
+    const command = new PutObjectCommand({
+        Bucket: CONFIG.S3_BUCKET,
+        Key: key,
+        Body: imageBuffer,
+        ContentType: 'image/jpeg',
+        CacheControl: 'public, max-age=3600'
+    });
+    
+    await s3Client.send(command);
+    
+    if (CONFIG.CLOUDFRONT_URL) {
+        return `${CONFIG.CLOUDFRONT_URL}/${key}`;
+    }
+    return `https://${CONFIG.S3_BUCKET}.s3.amazonaws.com/${key}`;
+}
+
+/**
+ * 💧 Publicar Cisterna en Telegram
+ */
+async function publishToTelegramCisterna(imageUrl, caption) {
+    console.log('📱 Publicando SMAWA en Telegram...');
+    const botToken = process.env.TELEGRAM_BOT_TOKEN;
+    const channelId = process.env.TELEGRAM_CHANNEL_ID;
+    
+    if (!botToken || !channelId) return { skipped: true, reason: 'No credentials' };
+    
+    const axios = require('axios');
+    
+    try {
+        const response = await axios.post(
+            `https://api.telegram.org/bot${botToken}/sendPhoto`,
+            {
+                chat_id: channelId,
+                photo: imageUrl,
+                caption: caption,
+                parse_mode: 'Markdown'
+            },
+            { timeout: 10000 }
+        );
+        
+        console.log(`✅ Publicado volumétrico en Telegram`);
+        return { success: true, messageId: response.data.result?.message_id };
+        
+    } catch (error) {
+        console.error('❌ Error publicando SMAWA en Telegram:', error.response?.data || error.message);
+        return { success: false, error: error.response?.data?.description || error.message };
+    }
 }
