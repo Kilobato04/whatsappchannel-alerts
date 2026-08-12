@@ -503,11 +503,12 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 🔥 FIX 2: Fondo transparente para respetar el Navy de tu CSS frontend
+    // 🔥 FIX 2: Dejamos que el frontend dibuje su fondo Navy. Borramos el override de background.
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
-            body, html { width: 800px !important; overflow: hidden; background: transparent !important; }
+            /* Solo ajustamos anchos, dejamos los colores en paz */
+            body, html { width: 800px !important; overflow: hidden; }
             #cisternsGrid { padding: 10px 4px !important; width: 800px !important; max-width: 800px !important; }
         ` 
     });
@@ -527,7 +528,7 @@ async function captureCisternaPanel(browser, targetUrl) {
         screenshot = await page.screenshot({ 
             type: 'jpeg', 
             quality: 90,
-            omitBackground: true, // Asegura que no ponga fondos blancos por defecto
+            // 👈 ELIMINAMOS omitBackground: true para que atrape el fondo Navy
             clip: {
                 x: 0,
                 y: 0,
