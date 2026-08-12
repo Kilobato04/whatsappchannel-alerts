@@ -482,14 +482,15 @@ function getShortRecommendations(category) {
 }
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Ancho HD 800px + Sin márgenes laterales)
+ * 💧 Capturar panel de Cisterna SMAWA (Fijo y Directo)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 1. Aumentamos a 800px para máxima calidad en Telegram
-    await page.setViewport({ width: 800, height: 2500, deviceScaleFactor: 2 });
+    // 🔥 TU SUGERENCIA APLICADA:
+    // Ventana fija de 600x1180. Sin inyecciones, sin matemáticas, sin tijeras.
+    await page.setViewport({ width: 600, height: 1180, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -501,42 +502,15 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 🔥 FIX: Cambiamos "padding: 15px" por "padding: 15px 4px" para eliminar los bordes blancos izquierdo/derecho
-    await page.addStyleTag({ 
-        content: `
-            .modebar { display: none !important; }
-            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 800px !important; overflow: hidden; }
-            
-            #cisternsGrid { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 15px 4px !important; box-sizing: border-box; }
-            
-            .cistern-card { max-width: 100% !important; width: 100% !important; margin-bottom: 15px !important; box-sizing: border-box; }
-        ` 
-    });
-
     console.log('⏳ Panel cargado, esperando 2 segundos para estabilizar gráficas...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
+    console.log('📸 Tomando foto directa de la pantalla...');
+    
     let screenshot;
     try {
-        const gridHeight = await page.evaluate(() => {
-            const grid = document.getElementById('cisternsGrid');
-            return grid ? grid.getBoundingClientRect().height : 1500;
-        });
-
-        console.log(`📐 Recortando foto (Clip) a: 800x${Math.round(gridHeight)}px`);
-        
-        // Recorte instantáneo
-        screenshot = await page.screenshot({ 
-            type: 'jpeg', 
-            quality: 90,
-            clip: {
-                x: 0,
-                y: 0,
-                width: 800,
-                height: Math.round(gridHeight)
-            }
-        });
-        
+        // 🔥 Foto directa: toma la ventana completa de 600x1180 al instante
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
         screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
