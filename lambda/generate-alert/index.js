@@ -85,7 +85,6 @@ exports.handler = async (event) => {
         else if (tipoAlerta === 'CISTERNA') {
             console.log('💧 Ejecutando monitoreo volumétrico SMAWA...');
             
-            // 🔥 LE AGREGAMOS EL PARÁMETRO BOT
             const targetUrl = CONFIG.PANEL_URL_CISTERNA + '?bot=true';
             
             const imageBuffer = await captureCisternaPanel(browser, targetUrl);
@@ -94,7 +93,11 @@ exports.handler = async (event) => {
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
             
-            // Fix matemático para la hora de CDMX (UTC-6) del texto de Telegram
+            // 🔥 FIX 1: Darle a AWS S3 3 segundos para propagar la imagen globalmente
+            console.log('⏳ Esperando 3 segundos para propagación en S3...');
+            await new Promise(resolve => setTimeout(resolve, 3000));
+            
+            // Fix matemático para la hora de CDMX (UTC-6)
             const now = new Date();
             const mxTime = new Date(now.getTime() - (6 * 3600 * 1000));
             const pad = (n) => n.toString().padStart(2, '0');
@@ -478,21 +481,20 @@ function getShortRecommendations(category) {
     return recommendations[category] || '⚠️ Consulta recomendaciones oficiales.';
 }
 
+
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Recorte de Elemento + Bot Mode)
+ * 💧 Capturar panel de Cisterna SMAWA (Ultra Rápido + Sin bordes)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 🔥 FIX: Ancho ajustado a 480px (igual que el aire) para formato móvil sin bordes muertos
+    // 🔥 FIX 2A: Ancho móvil (480px) idéntico a las tarjetas del aire para eliminar bordes
     await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 2 });
     
-    // networkidle2 evita que conexiones secundarias cuelguen la espera
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
-    console.log('⏳ Esperando a que el frontend termine de cargar datos y quite el loader...');
-    
+    console.log('⏳ Esperando a que el frontend termine de cargar datos...');
     try {
         await page.waitForFunction('window.dashboardReady === true', { timeout: 35000 });
         console.log('✅ Frontend reporta carga completa.');
@@ -507,31 +509,38 @@ async function captureCisternaPanel(browser, targetUrl) {
             .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
             .svg-container svg { width: 100% !important; }
             body { background-color: #f4f7f6 !important; margin: 0; padding: 0; }
-            /* Reducimos el padding a 10px para un margen más ajustado */
             #cisternsGrid { max-width: 100% !important; margin: 0; padding: 10px; background-color: #f4f7f6; }
         ` 
     });
     
-    // Forzar redimensionamiento global para recalcular anchos
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📸 Tomando foto con recorte de elemento...');
+    console.log('📸 Ajustando ventana al alto exacto para captura instantánea...');
     
     let screenshot;
     try {
-        // 🔥 MAGIA: Recorte del contenedor con dimensiones móviles (480px)
-        const gridElement = await page.$('#cisternsGrid');
+        // 🔥 FIX 2B: Leemos la altura exacta de las tarjetas y ajustamos la ventana. 
+        // Esto toma milisegundos a diferencia de gridElement.screenshot()
+        const gridHeight = await page.evaluate(() => {
+            const grid = document.getElementById('cisternsGrid');
+            return grid ? grid.getBoundingClientRect().height + 20 : 1200; // +20 por padding
+        });
+
+        console.log(`📐 Ajustando viewport al alto: ${Math.round(gridHeight)}px`);
         
-        if (gridElement) {
-            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
-        } else {
-            console.log('⚠️ No se encontró el grid, aplicando fullPage...');
-            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
-        }
+        await page.setViewport({ 
+            width: 480, 
+            height: Math.round(gridHeight), 
+            deviceScaleFactor: 2 
+        });
+
+        // Tomamos una foto normal (de la ventana ya ajustada)
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
     }
     
     console.log('✅ Captura de cisterna completada');
