@@ -484,14 +484,15 @@ function getShortRecommendations(category) {
 
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Tijeras Matemáticas - Ultra Rápido)
+ * 💧 Capturar panel de Cisterna SMAWA (Ancho expandido + Recorte Clip ultra-rápido)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 1. Iniciamos con 480px, pero un alto desmesurado (1800) para que Plotly pinte libre y holgado.
-    await page.setViewport({ width: 480, height: 1800, deviceScaleFactor: 2 });
+    // 1. APLICAMOS TU IDEA: Hacemos la ventana mucho más ancha (760px) para que las gráficas 
+    // se estiren un 40-50% más. El alto lo dejamos sobrado (2500px).
+    await page.setViewport({ width: 760, height: 2500, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -503,41 +504,41 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 🔥 Inyectamos CSS para forzar el relleno completo y ocultar los márgenes blancos sobrantes
+    // Forzamos al grid y a las tarjetas a ocupar el 100% de esos 760px, eliminando los márgenes
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
-            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 480px !important; overflow: hidden; }
-            
-            /* Empujamos el grid al borde exacto de los 480px */
-            #cisternsGrid { max-width: 480px !important; width: 480px !important; margin: 0 !important; padding: 10px !important; box-sizing: border-box; }
-            .cistern-card { margin: 0 0 10px 0 !important; width: 100% !important; max-width: 100% !important; }
+            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 760px !important; }
+            #cisternsGrid { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 15px !important; box-sizing: border-box; }
+            .cistern-card { max-width: 100% !important; width: 100% !important; margin-bottom: 15px !important; }
         ` 
     });
 
-    console.log('⏳ Panel cargado, esperando 2 segundos para gráficas...');
+    console.log('⏳ Panel cargado, esperando 2 segundos para estabilizar gráficas...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     let screenshot;
     try {
-        // 2. Le preguntamos a la página cuánto mide exactamente tu cuadrícula
         const gridHeight = await page.evaluate(() => {
             const grid = document.getElementById('cisternsGrid');
-            return grid ? grid.getBoundingClientRect().height : 1200;
+            return grid ? grid.getBoundingClientRect().height : 1500;
         });
 
-        console.log(`📐 Ajustando viewport de la cámara al alto exacto: ${Math.round(gridHeight)}px`);
+        console.log(`📐 Recortando foto (Clip) a: 760x${Math.round(gridHeight)}px`);
         
-        // 3. Ajustamos la ventana al tamaño MILIMÉTRICO de tu contenido. 
-        // No tocamos el ancho, solo recortamos lo que sobra hacia abajo.
-        await page.setViewport({ 
-            width: 480, 
-            height: Math.round(gridHeight), 
-            deviceScaleFactor: 2 
+        // 🔥 LA MAGIA NEGRA: En vez de redimensionar la ventana (que dispara el infernal 'resize' de Plotly),
+        // simplemente usamos 'clip'. Es como recortar la foto con tijeras después de tomarla.
+        // ¡Esto evita el redibujado y toma 1 segundo!
+        screenshot = await page.screenshot({ 
+            type: 'jpeg', 
+            quality: 90,
+            clip: {
+                x: 0,
+                y: 0,
+                width: 760,
+                height: Math.round(gridHeight)
+            }
         });
-
-        // 4. Tomamos foto NORMAL (no element.screenshot), que tarda solo 1 segundo.
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
         
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
