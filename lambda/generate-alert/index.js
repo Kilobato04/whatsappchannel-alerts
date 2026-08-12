@@ -85,7 +85,8 @@ exports.handler = async (event) => {
         else if (tipoAlerta === 'CISTERNA') {
             console.log('💧 Ejecutando monitoreo volumétrico SMAWA...');
             
-            const targetUrl = CONFIG.PANEL_URL_CISTERNA;
+            // 🔥 LE AGREGAMOS EL PARÁMETRO BOT
+            const targetUrl = CONFIG.PANEL_URL_CISTERNA + '?bot=true';
             
             const imageBuffer = await captureCisternaPanel(browser, targetUrl);
             console.log(`📸 Captura volumétrica generada: ${imageBuffer.length} bytes`);
@@ -93,14 +94,13 @@ exports.handler = async (event) => {
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
             
-            // Obtener la hora exacta de CDMX usando el motor nativo de localización
-            const dateTime = new Date().toLocaleString('es-MX', { 
-                timeZone: 'America/Mexico_City', 
-                day: '2-digit', month: '2-digit', year: 'numeric', 
-                hour: '2-digit', minute: '2-digit', hour12: true 
-            });
+            // Fix matemático para la hora de CDMX (UTC-6) del texto de Telegram
+            const now = new Date();
+            const mxTime = new Date(now.getTime() - (6 * 3600 * 1000));
+            const pad = (n) => n.toString().padStart(2, '0');
+            const dateTime = `${pad(mxTime.getUTCDate())}/${pad(mxTime.getUTCMonth() + 1)}/${mxTime.getUTCFullYear()}, ${pad(mxTime.getUTCHours())}:${pad(mxTime.getUTCMinutes())}`;
 
-            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${targetUrl})\n\n_${dateTime} (CDMX)_`;
+            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${CONFIG.PANEL_URL_CISTERNA})\n\n_${dateTime} (CDMX)_`;
             
             const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage);
             
@@ -477,31 +477,37 @@ function getShortRecommendations(category) {
 }
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA
+ * 💧 Capturar panel de Cisterna SMAWA (Optimizado)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // Subimos el ancho a 1200 para aprovechar al máximo los márgenes laterales
-    await page.setViewport({ width: 1200, height: 1200, deviceScaleFactor: 2 });
+    // ESTA ES LA LÍNEA MÁGICA PARA LA HORA:
+    await page.emulateTimezone('America/Mexico_City');
+    
+    // Ancho ajustado a 960px para proporciones perfectas en móvil
+    await page.setViewport({ width: 960, height: 1200, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
     
     console.log('🛠️ Limpiando estilos y ajustando anchos de Plotly...');
     
     // Inyectamos CSS para:
-    // 1. Ocultar la barra de herramientas (.modebar)
-    // 2. Forzar a los contenedores de Plotly a ocupar el 100% de ancho y eliminar el espacio vacío
+    // 1. Ocultar modebar de Plotly
+    // 2. Expandir gráficas al 100%
+    // 3. Darle al contenedor un fondo limpio y un margen (padding) para la foto
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
             .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
             .svg-container svg { width: 100% !important; }
+            body { background-color: #f4f7f6 !important; }
+            #cisternsGrid { max-width: 100% !important; margin: 0; padding: 20px; background-color: #f4f7f6; }
         ` 
     });
     
-    // Forzar redimensionamiento global en el navegador
+    // Forzar redimensionamiento global para recalcular anchos
     await page.evaluate(() => {
         window.dispatchEvent(new Event('resize'));
     });
@@ -511,11 +517,16 @@ async function captureCisternaPanel(browser, targetUrl) {
     
     let screenshot;
     try {
-        screenshot = await page.screenshot({ 
-            type: 'jpeg', 
-            quality: 90,
-            fullPage: true 
-        });
+        // 🔥 MAGIA: Seleccionamos específicamente el contenedor de las tarjetas.
+        // Esto recorta automáticamente el espacio muerto superior, inferior y lateral.
+        const gridElement = await page.$('#cisternsGrid');
+        
+        if (gridElement) {
+            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
+        } else {
+            // Fallback por si el ID cambia
+            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
+        }
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
         screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
