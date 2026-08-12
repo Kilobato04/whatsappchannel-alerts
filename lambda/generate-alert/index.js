@@ -483,14 +483,15 @@ function getShortRecommendations(category) {
 
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Ultra Rápido + Sin bordes)
+ * 💧 Capturar panel de Cisterna SMAWA (Súper rápido gracias al Frontend Responsivo)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 🔥 FIX 2A: Ancho móvil (480px) idéntico a las tarjetas del aire para eliminar bordes
-    await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 2 });
+    // 1. Abrimos en formato móvil (480px) y sobrados de alto (1600px).
+    // Al no redimensionar nunca, Plotly dibuja 1 sola vez y en milisegundos.
+    await page.setViewport({ width: 480, height: 1600, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -499,48 +500,28 @@ async function captureCisternaPanel(browser, targetUrl) {
         await page.waitForFunction('window.dashboardReady === true', { timeout: 35000 });
         console.log('✅ Frontend reporta carga completa.');
     } catch (e) {
-        console.log('⚠️ Timeout esperando la señal del frontend, forzando continuación...');
+        console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    console.log('🛠️ Limpiando estilos y ajustando anchos de Plotly...');
-    await page.addStyleTag({ 
-        content: `
-            .modebar { display: none !important; }
-            .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
-            .svg-container svg { width: 100% !important; }
-            body { background-color: #f4f7f6 !important; margin: 0; padding: 0; }
-            #cisternsGrid { max-width: 100% !important; margin: 0; padding: 10px; background-color: #f4f7f6; }
-        ` 
-    });
+    // 🔥 NOTA: Eliminamos la inyección de CSS y el evento 'resize' que tardaba 50 segundos,
+    // porque tu frontend ahora hace todo el trabajo de diseño de forma nativa.
     
-    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    console.log('📸 Ajustando ventana al alto exacto para captura instantánea...');
+    console.log('📸 Tomando foto (Recorte instantáneo del elemento)...');
     
     let screenshot;
     try {
-        // 🔥 FIX 2B: Leemos la altura exacta de las tarjetas y ajustamos la ventana. 
-        // Esto toma milisegundos a diferencia de gridElement.screenshot()
-        const gridHeight = await page.evaluate(() => {
-            const grid = document.getElementById('cisternsGrid');
-            return grid ? grid.getBoundingClientRect().height + 20 : 1200; // +20 por padding
-        });
-
-        console.log(`📐 Ajustando viewport al alto: ${Math.round(gridHeight)}px`);
+        // Al estar la página estática y lista, el recorte del elemento es inmediato
+        const gridElement = await page.$('#cisternsGrid');
         
-        await page.setViewport({ 
-            width: 480, 
-            height: Math.round(gridHeight), 
-            deviceScaleFactor: 2 
-        });
-
-        // Tomamos una foto normal (de la ventana ya ajustada)
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        if (gridElement) {
+            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
+        } else {
+            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
+        }
         
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
     }
     
     console.log('✅ Captura de cisterna completada');
