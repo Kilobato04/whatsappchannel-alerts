@@ -22,7 +22,7 @@ Esta función Lambda genera la imagen de alerta de calidad del aire.
 
 ## Deploy
 ```bash
-cd generate-alert $ 
+cd whatsappchannel-alerts/lambda/generate-alert
 git pull origin main
 ./deploy.sh
 ```
