@@ -482,18 +482,18 @@ function getShortRecommendations(category) {
 }
 
 
+
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Idéntico a lógica de Calidad del Aire)
+ * 💧 Capturar panel de Cisterna SMAWA (Tijeras Matemáticas - Ultra Rápido)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 1. Mismo viewport fijo que Calidad del Aire (1800 de alto para asegurar que quepan las 3 tarjetas)
+    // 1. Iniciamos con 480px, pero un alto desmesurado (1800) para que Plotly pinte libre y holgado.
     await page.setViewport({ width: 480, height: 1800, deviceScaleFactor: 2 });
     
-    // 2. Usamos networkidle0 igual que en Aire
-    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
     console.log('⏳ Esperando a que el frontend termine de cargar datos...');
     try {
@@ -503,34 +503,45 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 3. Pausa exacta de 2 segundos para que Plotly termine de pintar (igual que en Aire)
+    // 🔥 Inyectamos CSS para forzar el relleno completo y ocultar los márgenes blancos sobrantes
+    await page.addStyleTag({ 
+        content: `
+            .modebar { display: none !important; }
+            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 480px !important; overflow: hidden; }
+            
+            /* Empujamos el grid al borde exacto de los 480px */
+            #cisternsGrid { max-width: 480px !important; width: 480px !important; margin: 0 !important; padding: 10px !important; box-sizing: border-box; }
+            .cistern-card { margin: 0 0 10px 0 !important; width: 100% !important; max-width: 100% !important; }
+        ` 
+    });
+
     console.log('⏳ Panel cargado, esperando 2 segundos para gráficas...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📸 Capturando contenedor...');
-    
     let screenshot;
     try {
-        // 4. Recorte del elemento directo, SIN inyectar CSS y SIN evento de resize
-        const gridElement = await page.$('#cisternsGrid');
+        // 2. Le preguntamos a la página cuánto mide exactamente tu cuadrícula
+        const gridHeight = await page.evaluate(() => {
+            const grid = document.getElementById('cisternsGrid');
+            return grid ? grid.getBoundingClientRect().height : 1200;
+        });
+
+        console.log(`📐 Ajustando viewport de la cámara al alto exacto: ${Math.round(gridHeight)}px`);
         
-        if (gridElement) {
-            const boundingBox = await gridElement.boundingBox();
-            console.log('📐 Dimensiones del panel cisterna:', {
-                width: Math.round(boundingBox.width),
-                height: Math.round(boundingBox.height)
-            });
-            
-            // Toma la foto solo de ese bloque, eliminando márgenes de la página base
-            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
-        } else {
-            console.log('⚠️ No se encontró el grid, aplicando fullPage...');
-            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
-        }
+        // 3. Ajustamos la ventana al tamaño MILIMÉTRICO de tu contenido. 
+        // No tocamos el ancho, solo recortamos lo que sobra hacia abajo.
+        await page.setViewport({ 
+            width: 480, 
+            height: Math.round(gridHeight), 
+            deviceScaleFactor: 2 
+        });
+
+        // 4. Tomamos foto NORMAL (no element.screenshot), que tarda solo 1 segundo.
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
         
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
     }
     
     console.log('✅ Captura de cisterna completada');
