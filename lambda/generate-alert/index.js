@@ -479,21 +479,20 @@ function getShortRecommendations(category) {
 }
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Optimizado contra Timeouts)
+ * 💧 Capturar panel de Cisterna SMAWA (Recorte de Elemento + Bot Mode)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // Empezamos con un alto genérico
+    // Ancho ajustado a 960px para proporciones perfectas en móvil
     await page.setViewport({ width: 960, height: 1200, deviceScaleFactor: 2 });
     
-    // networkidle2 es más permisivo si la página mantiene conexiones abiertas (evita pausas de 30s)
+    // networkidle2 evita que conexiones secundarias cuelguen la espera
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
     console.log('⏳ Esperando a que el frontend termine de cargar datos y quite el loader...');
     
-    // Esperamos la señal explícita de tu frontend (cuando el spinner desaparece)
     try {
         await page.waitForFunction('window.dashboardReady === true', { timeout: 35000 });
         console.log('✅ Frontend reporta carga completa.');
@@ -512,35 +511,27 @@ async function captureCisternaPanel(browser, targetUrl) {
         ` 
     });
     
-    // Forzar redimensionamiento global
+    // Forzar redimensionamiento global para recalcular anchos
     await page.evaluate(() => window.dispatchEvent(new Event('resize')));
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📸 Calculando tamaño exacto para recorte perfecto...');
+    console.log('📸 Tomando foto con recorte de elemento...');
     
     let screenshot;
     try {
-        // 🔥 MAGIA: En lugar de fotografiar el elemento, leemos su alto y ajustamos la ventana.
-        // Esto evita el congelamiento del motor gráfico de Chromium.
-        const gridHeight = await page.evaluate(() => {
-            const grid = document.getElementById('cisternsGrid');
-            return grid ? grid.getBoundingClientRect().height + 40 : 1200; // +40 por el padding
-        });
-
-        console.log(`📐 Ajustando viewport al alto exacto del grid: ${Math.round(gridHeight)}px`);
+        // 🔥 MAGIA: Regresamos al recorte del contenedor. 
+        // Esto elimina márgenes laterales y muertos arriba/abajo.
+        const gridElement = await page.$('#cisternsGrid');
         
-        await page.setViewport({ 
-            width: 960, 
-            height: Math.round(gridHeight), 
-            deviceScaleFactor: 2 
-        });
-
-        // Tomamos la captura normal
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
-        
+        if (gridElement) {
+            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
+        } else {
+            console.log('⚠️ No se encontró el grid, aplicando fullPage...');
+            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
+        }
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
     }
     
     console.log('✅ Captura de cisterna completada');
