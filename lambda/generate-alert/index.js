@@ -201,8 +201,9 @@ async function launchBrowser() {
     return browser;
 }
 
+
 /**
- * Capturar panel con Puppeteer
+ * Capturar panel con Puppeteer (Calidad del Aire)
  */
 async function capturePanel(browser, station) {
     console.log('📸 Capturando panel...');
@@ -215,8 +216,9 @@ async function capturePanel(browser, station) {
         deviceScaleFactor: 2
     });
     
-    console.log(`🔗 Navegando a: ${CONFIG.PANEL_URL}`);
-    await page.goto(CONFIG.PANEL_URL, {
+    // 🔥 FIX: Actualizado a PANEL_URL_AIRE
+    console.log(`🔗 Navegando a: ${CONFIG.PANEL_URL_AIRE}`);
+    await page.goto(CONFIG.PANEL_URL_AIRE, {
         waitUntil: 'networkidle0',
         timeout: 30000
     });
