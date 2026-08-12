@@ -479,59 +479,68 @@ function getShortRecommendations(category) {
 }
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Optimizado)
+ * 💧 Capturar panel de Cisterna SMAWA (Optimizado contra Timeouts)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // ESTA ES LA LÍNEA MÁGICA PARA LA HORA:
-    await page.emulateTimezone('America/Mexico_City');
-    
-    // Ancho ajustado a 960px para proporciones perfectas en móvil
+    // Empezamos con un alto genérico
     await page.setViewport({ width: 960, height: 1200, deviceScaleFactor: 2 });
     
-    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
+    // networkidle2 es más permisivo si la página mantiene conexiones abiertas (evita pausas de 30s)
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
+    
+    console.log('⏳ Esperando a que el frontend termine de cargar datos y quite el loader...');
+    
+    // Esperamos la señal explícita de tu frontend (cuando el spinner desaparece)
+    try {
+        await page.waitForFunction('window.dashboardReady === true', { timeout: 35000 });
+        console.log('✅ Frontend reporta carga completa.');
+    } catch (e) {
+        console.log('⚠️ Timeout esperando la señal del frontend, forzando continuación...');
+    }
     
     console.log('🛠️ Limpiando estilos y ajustando anchos de Plotly...');
-    
-    // Inyectamos CSS para:
-    // 1. Ocultar modebar de Plotly
-    // 2. Expandir gráficas al 100%
-    // 3. Darle al contenedor un fondo limpio y un margen (padding) para la foto
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
             .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
             .svg-container svg { width: 100% !important; }
-            body { background-color: #f4f7f6 !important; }
+            body { background-color: #f4f7f6 !important; margin: 0; padding: 0; }
             #cisternsGrid { max-width: 100% !important; margin: 0; padding: 20px; background-color: #f4f7f6; }
         ` 
     });
     
-    // Forzar redimensionamiento global para recalcular anchos
-    await page.evaluate(() => {
-        window.dispatchEvent(new Event('resize'));
-    });
+    // Forzar redimensionamiento global
+    await page.evaluate(() => window.dispatchEvent(new Event('resize')));
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('⏳ Esperando 3 segundos para renderizado final...');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log('📸 Calculando tamaño exacto para recorte perfecto...');
     
     let screenshot;
     try {
-        // 🔥 MAGIA: Seleccionamos específicamente el contenedor de las tarjetas.
-        // Esto recorta automáticamente el espacio muerto superior, inferior y lateral.
-        const gridElement = await page.$('#cisternsGrid');
+        // 🔥 MAGIA: En lugar de fotografiar el elemento, leemos su alto y ajustamos la ventana.
+        // Esto evita el congelamiento del motor gráfico de Chromium.
+        const gridHeight = await page.evaluate(() => {
+            const grid = document.getElementById('cisternsGrid');
+            return grid ? grid.getBoundingClientRect().height + 40 : 1200; // +40 por el padding
+        });
+
+        console.log(`📐 Ajustando viewport al alto exacto del grid: ${Math.round(gridHeight)}px`);
         
-        if (gridElement) {
-            screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
-        } else {
-            // Fallback por si el ID cambia
-            screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
-        }
+        await page.setViewport({ 
+            width: 960, 
+            height: Math.round(gridHeight), 
+            deviceScaleFactor: 2 
+        });
+
+        // Tomamos la captura normal
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
     }
     
     console.log('✅ Captura de cisterna completada');
