@@ -483,17 +483,17 @@ function getShortRecommendations(category) {
 
 
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Súper rápido gracias al Frontend Responsivo)
+ * 💧 Capturar panel de Cisterna SMAWA (Idéntico a lógica de Calidad del Aire)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 1. Abrimos en formato móvil (480px) y sobrados de alto (1600px).
-    // Al no redimensionar nunca, Plotly dibuja 1 sola vez y en milisegundos.
-    await page.setViewport({ width: 480, height: 1600, deviceScaleFactor: 2 });
+    // 1. Mismo viewport fijo que Calidad del Aire (1800 de alto para asegurar que quepan las 3 tarjetas)
+    await page.setViewport({ width: 480, height: 1800, deviceScaleFactor: 2 });
     
-    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
+    // 2. Usamos networkidle0 igual que en Aire
+    await page.goto(targetUrl, { waitUntil: 'networkidle0', timeout: 30000 });
     
     console.log('⏳ Esperando a que el frontend termine de cargar datos...');
     try {
@@ -503,19 +503,28 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 🔥 NOTA: Eliminamos la inyección de CSS y el evento 'resize' que tardaba 50 segundos,
-    // porque tu frontend ahora hace todo el trabajo de diseño de forma nativa.
+    // 3. Pausa exacta de 2 segundos para que Plotly termine de pintar (igual que en Aire)
+    console.log('⏳ Panel cargado, esperando 2 segundos para gráficas...');
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📸 Tomando foto (Recorte instantáneo del elemento)...');
+    console.log('📸 Capturando contenedor...');
     
     let screenshot;
     try {
-        // Al estar la página estática y lista, el recorte del elemento es inmediato
+        // 4. Recorte del elemento directo, SIN inyectar CSS y SIN evento de resize
         const gridElement = await page.$('#cisternsGrid');
         
         if (gridElement) {
+            const boundingBox = await gridElement.boundingBox();
+            console.log('📐 Dimensiones del panel cisterna:', {
+                width: Math.round(boundingBox.width),
+                height: Math.round(boundingBox.height)
+            });
+            
+            // Toma la foto solo de ese bloque, eliminando márgenes de la página base
             screenshot = await gridElement.screenshot({ type: 'jpeg', quality: 90 });
         } else {
+            console.log('⚠️ No se encontró el grid, aplicando fullPage...');
             screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
         }
         
