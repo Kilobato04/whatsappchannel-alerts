@@ -78,7 +78,7 @@ exports.handler = async (event) => {
                 })
             };
         }
-        
+
         // ==========================================
         // 💧 FLUJO 2: CISTERNAS (SMAWA)
         // ==========================================
@@ -90,49 +90,22 @@ exports.handler = async (event) => {
             const imageBuffer = await captureCisternaPanel(browser, targetUrl);
             console.log(`📸 Captura volumétrica generada: ${imageBuffer.length} bytes`);
 
-            // 🔥 FIX: Extraer datos procesados por el Frontend
-            // Buscamos la última página abierta (la de las cisternas)
+            // 🔥 FIX PUNTUAL: Extraemos directamente el texto pre-armado (Opción 2) del Frontend
             const pages = await browser.pages();
             const page = pages[pages.length - 1];
             
-            const botData = await page.evaluate(() => window.botTelegramData);
-            console.log("📊 Datos extraídos del frontend:", botData);
-
-            // Fallback: si el frontend no respondió, ponemos valores por defecto para no romper la alerta
-            const c_perc = botData?.C?.porcentaje || '--';
-            const c_lit = botData?.C?.litros || '--';
-            const c_aut = botData?.C?.autonomia || '--';
-            const b_perc = botData?.B?.porcentaje || '--';
-            const b_gas = botData?.B?.gastoPromedio || '--';
+            const telegramMessage = await page.evaluate(() => window.telegramCaption);
+            console.log("💬 Mensaje extraído del frontend:\n", telegramMessage);
             
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
             
-            // 🔥 FIX 1: Darle a AWS S3 3 segundos para propagar la imagen globalmente
             console.log('⏳ Esperando 3 segundos para propagación en S3...');
             await new Promise(resolve => setTimeout(resolve, 3000));
             
-            // Fix matemático para la hora de CDMX (UTC-6)
-            const now = new Date();
-            const mxTime = new Date(now.getTime() - (6 * 3600 * 1000));
-            const pad = (n) => n.toString().padStart(2, '0');
-            const dateTime = `${pad(mxTime.getUTCDate())}/${pad(mxTime.getUTCMonth() + 1)}/${mxTime.getUTCFullYear()}, ${pad(mxTime.getUTCHours())}:${pad(mxTime.getUTCMinutes())}`;
-
-            // Ajustamos el mensaje con los datos dinámicos extraídos
-            const telegramMessage = 
-            `💧 *Reporte de Nivel Red de Cisternas IBERO CDMX*
-            Estado actual de las reservas de agua:
-            
-            🔵 *Agua Potable (Cisterna C - Total):*
-            Nivel al ${c_perc}% (${c_lit} L). Autonomía: ${c_aut}.
-            
-            🟢 *Aguas Servidas (Cisterna B):*
-            Nivel al ${b_perc}%. Gasto promedio: ${b_gas} L/h.
-            
-            🔗 [Ver Panel Interactivo Web](${CONFIG.PANEL_URL_CISTERNA})
-            _${dateTime} (CDMX)_`;
-            
-            const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage);
+            // Enviamos a Telegram usando el mensaje extraído (con un fallback por si falla)
+            const fallbackMsg = "💧 *Reporte de Nivel Red de Cisternas IBERO CDMX*\n🔗 [Ver Panel Interactivo Web](" + CONFIG.PANEL_URL_CISTERNA + ")";
+            const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage || fallbackMsg);
             
             return {
                 statusCode: 200,
@@ -530,10 +503,11 @@ async function captureCisternaPanel(browser, targetUrl) {
     }
     
     // 🔥 Aseguramos que el viewport del bot fuerce el renderizado sin márgenes
+    // FIX: Eliminamos el fondo gris para que se vea el degradado azul navy del frontend
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
-            body, html { width: 800px !important; overflow: hidden; background-color: #f4f7f6; }
+            body, html { width: 800px !important; overflow: hidden; background: transparent !important; }
             #cisternsGrid { padding: 10px 4px !important; width: 800px !important; max-width: 800px !important; }
         ` 
     });
