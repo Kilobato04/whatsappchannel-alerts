@@ -89,6 +89,21 @@ exports.handler = async (event) => {
             
             const imageBuffer = await captureCisternaPanel(browser, targetUrl);
             console.log(`📸 Captura volumétrica generada: ${imageBuffer.length} bytes`);
+
+            // 🔥 FIX: Extraer datos procesados por el Frontend
+            // Buscamos la última página abierta (la de las cisternas)
+            const pages = await browser.pages();
+            const page = pages[pages.length - 1];
+            
+            const botData = await page.evaluate(() => window.botTelegramData);
+            console.log("📊 Datos extraídos del frontend:", botData);
+
+            // Fallback: si el frontend no respondió, ponemos valores por defecto para no romper la alerta
+            const c_perc = botData?.C?.porcentaje || '--';
+            const c_lit = botData?.C?.litros || '--';
+            const c_aut = botData?.C?.autonomia || '--';
+            const b_perc = botData?.B?.porcentaje || '--';
+            const b_gas = botData?.B?.gastoPromedio || '--';
             
             const imageUrl = await uploadCisternaToS3(imageBuffer);
             console.log(`☁️ Imagen de cisterna subida: ${imageUrl}`);
@@ -103,7 +118,19 @@ exports.handler = async (event) => {
             const pad = (n) => n.toString().padStart(2, '0');
             const dateTime = `${pad(mxTime.getUTCDate())}/${pad(mxTime.getUTCMonth() + 1)}/${mxTime.getUTCFullYear()}, ${pad(mxTime.getUTCHours())}:${pad(mxTime.getUTCMinutes())}`;
 
-            const telegramMessage = `💧 *Reporte de Nivel de Cisterna (SMAWA)*\n\nAdjunto la captura actualizada del monitoreo volumétrico.\n\n📊 [Ver Panel Web](${CONFIG.PANEL_URL_CISTERNA})\n\n_${dateTime} (CDMX)_`;
+            // Ajustamos el mensaje con los datos dinámicos extraídos
+            const telegramMessage = 
+            `💧 *Reporte de Nivel Red de Cisternas IBERO CDMX*
+            Estado actual de las reservas de agua:
+            
+            🔵 *Agua Potable (Cisterna C - Total):*
+            Nivel al ${c_perc}% (${c_lit} L). Autonomía: ${c_aut}.
+            
+            🟢 *Aguas Servidas (Cisterna B):*
+            Nivel al ${b_perc}%. Gasto promedio: ${b_gas} L/h.
+            
+            🔗 [Ver Panel Interactivo Web](${CONFIG.PANEL_URL_CISTERNA})
+            _${dateTime} (CDMX)_`;
             
             const telegramResult = await publishToTelegramCisterna(imageUrl, telegramMessage);
             
