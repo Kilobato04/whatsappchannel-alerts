@@ -481,18 +481,15 @@ function getShortRecommendations(category) {
     return recommendations[category] || '⚠️ Consulta recomendaciones oficiales.';
 }
 
-
-
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Ancho expandido + Recorte Clip ultra-rápido)
+ * 💧 Capturar panel de Cisterna SMAWA (Ancho HD 800px + Sin márgenes laterales)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 1. APLICAMOS TU IDEA: Hacemos la ventana mucho más ancha (760px) para que las gráficas 
-    // se estiren un 40-50% más. El alto lo dejamos sobrado (2500px).
-    await page.setViewport({ width: 760, height: 2500, deviceScaleFactor: 2 });
+    // 1. Aumentamos a 800px para máxima calidad en Telegram
+    await page.setViewport({ width: 800, height: 2500, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -504,13 +501,15 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // Forzamos al grid y a las tarjetas a ocupar el 100% de esos 760px, eliminando los márgenes
+    // 🔥 FIX: Cambiamos "padding: 15px" por "padding: 15px 4px" para eliminar los bordes blancos izquierdo/derecho
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
-            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 760px !important; }
-            #cisternsGrid { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 15px !important; box-sizing: border-box; }
-            .cistern-card { max-width: 100% !important; width: 100% !important; margin-bottom: 15px !important; }
+            body, html { background-color: #f4f7f6 !important; margin: 0; padding: 0; width: 800px !important; overflow: hidden; }
+            
+            #cisternsGrid { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 15px 4px !important; box-sizing: border-box; }
+            
+            .cistern-card { max-width: 100% !important; width: 100% !important; margin-bottom: 15px !important; box-sizing: border-box; }
         ` 
     });
 
@@ -524,18 +523,16 @@ async function captureCisternaPanel(browser, targetUrl) {
             return grid ? grid.getBoundingClientRect().height : 1500;
         });
 
-        console.log(`📐 Recortando foto (Clip) a: 760x${Math.round(gridHeight)}px`);
+        console.log(`📐 Recortando foto (Clip) a: 800x${Math.round(gridHeight)}px`);
         
-        // 🔥 LA MAGIA NEGRA: En vez de redimensionar la ventana (que dispara el infernal 'resize' de Plotly),
-        // simplemente usamos 'clip'. Es como recortar la foto con tijeras después de tomarla.
-        // ¡Esto evita el redibujado y toma 1 segundo!
+        // Recorte instantáneo
         screenshot = await page.screenshot({ 
             type: 'jpeg', 
             quality: 90,
             clip: {
                 x: 0,
                 y: 0,
-                width: 760,
+                width: 800,
                 height: Math.round(gridHeight)
             }
         });
