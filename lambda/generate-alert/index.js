@@ -485,8 +485,8 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // Ancho ajustado a 960px para proporciones perfectas en móvil
-    await page.setViewport({ width: 960, height: 1200, deviceScaleFactor: 2 });
+    // 🔥 FIX: Ancho ajustado a 480px (igual que el aire) para formato móvil sin bordes muertos
+    await page.setViewport({ width: 480, height: 1200, deviceScaleFactor: 2 });
     
     // networkidle2 evita que conexiones secundarias cuelguen la espera
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
@@ -507,7 +507,8 @@ async function captureCisternaPanel(browser, targetUrl) {
             .js-plotly-plot, .plot-container, .svg-container { width: 100% !important; }
             .svg-container svg { width: 100% !important; }
             body { background-color: #f4f7f6 !important; margin: 0; padding: 0; }
-            #cisternsGrid { max-width: 100% !important; margin: 0; padding: 20px; background-color: #f4f7f6; }
+            /* Reducimos el padding a 10px para un margen más ajustado */
+            #cisternsGrid { max-width: 100% !important; margin: 0; padding: 10px; background-color: #f4f7f6; }
         ` 
     });
     
@@ -519,8 +520,7 @@ async function captureCisternaPanel(browser, targetUrl) {
     
     let screenshot;
     try {
-        // 🔥 MAGIA: Regresamos al recorte del contenedor. 
-        // Esto elimina márgenes laterales y muertos arriba/abajo.
+        // 🔥 MAGIA: Recorte del contenedor con dimensiones móviles (480px)
         const gridElement = await page.$('#cisternsGrid');
         
         if (gridElement) {
