@@ -488,9 +488,6 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 🔥 FIX 1: Forzamos el reloj de Chrome a CDMX. Adiós al bug de UTC y al desfase de la gráfica.
-    await page.emulateTimezone('America/Mexico_City');
-    
     await page.setViewport({ width: 800, height: 1800, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
