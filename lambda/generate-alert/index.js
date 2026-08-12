@@ -481,16 +481,16 @@ function getShortRecommendations(category) {
     return recommendations[category] || '⚠️ Consulta recomendaciones oficiales.';
 }
 
+
 /**
- * 💧 Capturar panel de Cisterna SMAWA (Fijo y Directo)
+ * 💧 Capturar panel de Cisterna SMAWA (Ancho 800px + Técnica Clip ultrarrápida)
  */
 async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    // 🔥 TU SUGERENCIA APLICADA:
-    // Ventana fija de 600x1180. Sin inyecciones, sin matemáticas, sin tijeras.
-    await page.setViewport({ width: 600, height: 1180, deviceScaleFactor: 2 });
+    // 1. Viewport ancho (800px) y sobrado de alto (1800) para no asfixiar a Plotly
+    await page.setViewport({ width: 800, height: 1800, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -502,15 +502,39 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
+    // 🔥 Aseguramos que el viewport del bot fuerce el renderizado sin márgenes
+    await page.addStyleTag({ 
+        content: `
+            .modebar { display: none !important; }
+            body, html { width: 800px !important; overflow: hidden; background-color: #f4f7f6; }
+            #cisternsGrid { padding: 10px 4px !important; width: 800px !important; max-width: 800px !important; }
+        ` 
+    });
+
     console.log('⏳ Panel cargado, esperando 2 segundos para estabilizar gráficas...');
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    console.log('📸 Tomando foto directa de la pantalla...');
-    
     let screenshot;
     try {
-        // 🔥 Foto directa: toma la ventana completa de 600x1180 al instante
-        screenshot = await page.screenshot({ type: 'jpeg', quality: 90 });
+        const gridHeight = await page.evaluate(() => {
+            const grid = document.getElementById('cisternsGrid');
+            return grid ? grid.getBoundingClientRect().height : 1200;
+        });
+
+        console.log(`📐 Recortando foto (Clip) a: 800x${Math.round(gridHeight)}px`);
+        
+        // 🔥 REGRESAMOS A LA TÉCNICA GANADORA: Clip toma 1-3 segundos
+        screenshot = await page.screenshot({ 
+            type: 'jpeg', 
+            quality: 90,
+            clip: {
+                x: 0,
+                y: 0,
+                width: 800,
+                height: Math.round(gridHeight)
+            }
+        });
+        
     } catch (error) {
         console.error('❌ Error capturando cisterna:', error);
         screenshot = await page.screenshot({ type: 'jpeg', quality: 90, fullPage: true });
