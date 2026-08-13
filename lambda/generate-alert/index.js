@@ -488,7 +488,7 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    await page.setViewport({ width: 820, height: 1800, deviceScaleFactor: 2 });
+    await page.setViewport({ width: 480, height: 2000, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -505,14 +505,14 @@ async function captureCisternaPanel(browser, targetUrl) {
         content: `
             .modebar { display: none !important; }
             body, html { 
-                width: 820px !important; 
+                width: 480px !important; 
                 overflow: hidden; 
                 margin: 0 !important; 
                 padding: 0 !important; 
             }
             #cisternsGrid { 
-                width: 820px !important; 
-                max-width: 820px !important; 
+                width: 480px !important; 
+                max-width: 48px !important; 
                 margin: 0 !important; 
                 padding: 0 !important; 
             }
@@ -538,7 +538,7 @@ async function captureCisternaPanel(browser, targetUrl) {
             clip: {
                 x: 0,
                 y: 0,
-                width: 820,
+                width: 480,
                 height: Math.round(gridHeight)
             }
         });
