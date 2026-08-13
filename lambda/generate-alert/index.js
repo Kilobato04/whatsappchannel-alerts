@@ -500,13 +500,22 @@ async function captureCisternaPanel(browser, targetUrl) {
         console.log('⚠️ Timeout esperando la señal del frontend...');
     }
     
-    // 🔥 FIX 2: Dejamos que el frontend dibuje su fondo Navy. Borramos el override de background.
+    // 🔥 FIX: Forzamos el ancho a 820px y eliminamos todo margen/padding para un recorte a sangre
     await page.addStyleTag({ 
         content: `
             .modebar { display: none !important; }
-            /* Solo ajustamos anchos, dejamos los colores en paz */
-            body, html { width: 820px !important; overflow: hidden; }
-            #cisternsGrid { padding: 10px 4px !important; width: 820px !important; max-width: 820px !important; }
+            body, html { 
+                width: 820px !important; 
+                overflow: hidden; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+            }
+            #cisternsGrid { 
+                width: 820px !important; 
+                max-width: 820px !important; 
+                margin: 0 !important; 
+                padding: 0 !important; 
+            }
         ` 
     });
 
