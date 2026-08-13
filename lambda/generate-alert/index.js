@@ -505,8 +505,8 @@ async function captureCisternaPanel(browser, targetUrl) {
         content: `
             .modebar { display: none !important; }
             /* Solo ajustamos anchos, dejamos los colores en paz */
-            body, html { width: 800px !important; overflow: hidden; }
-            #cisternsGrid { padding: 10px 4px !important; width: 800px !important; max-width: 800px !important; }
+            body, html { width: 820px !important; overflow: hidden; }
+            #cisternsGrid { padding: 10px 4px !important; width: 820px !important; max-width: 820px !important; }
         ` 
     });
 
@@ -520,7 +520,7 @@ async function captureCisternaPanel(browser, targetUrl) {
             return grid ? grid.getBoundingClientRect().height : 1200;
         });
 
-        console.log(`📐 Recortando foto (Clip) a: 800x${Math.round(gridHeight)}px`);
+        console.log(`📐 Recortando foto (Clip) a: 820x${Math.round(gridHeight)}px`);
         
         screenshot = await page.screenshot({ 
             type: 'jpeg', 
