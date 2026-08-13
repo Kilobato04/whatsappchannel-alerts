@@ -488,7 +488,7 @@ async function captureCisternaPanel(browser, targetUrl) {
     console.log(`🔗 Navegando a Cisterna: ${targetUrl}`);
     const page = await browser.newPage();
     
-    await page.setViewport({ width: 820, height: 1800, deviceScaleFactor: 2 });
+    await page.setViewport({ width: 780, height: 1800, deviceScaleFactor: 2 });
     
     await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 45000 });
     
@@ -529,7 +529,7 @@ async function captureCisternaPanel(browser, targetUrl) {
             clip: {
                 x: 0,
                 y: 0,
-                width: 480,
+                width: 720,
                 height: Math.round(gridHeight)
             }
         });
