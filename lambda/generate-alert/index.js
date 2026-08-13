@@ -512,7 +512,7 @@ async function captureCisternaPanel(browser, targetUrl) {
             }
             #cisternsGrid { 
                 width: 480px !important; 
-                max-width: 48px !important; 
+                max-width: 480px !important; 
                 margin: 0 !important; 
                 padding: 0 !important; 
             }
